@@ -25,6 +25,22 @@
 
 . /usr/lib/hae-functions
 
+usage()
+{
+	cat <<END
+Usage: $0 [options] [stage]
+
+Options:
+    -h          Display this usage information
+
+Stage can be one of:
+    ssh         Create ssh key for passwordless ssh between nodes
+
+If stage is not specified, each stage will be invoked in sequence.
+END
+	exit 0
+}
+
 init_ssh()
 {
 	start_service sshd
@@ -47,4 +63,25 @@ init_ssh()
 #{
 #}
 
-init_ssh
+while getopts 'h' o; do
+	case $o in
+	h) usage;;
+	esac
+done
+
+shift $(($OPTIND - 1))
+
+case $1 in
+ssh)
+	log_start
+	init_$1
+	;;
+"")
+	log_start
+	init_ssh
+	;;
+*)	echo -e "Invalid stage ($1)\n"
+	usage
+esac
+
+exit 0

@@ -25,9 +25,28 @@
 
 . /usr/lib/hae-functions
 
+declare SEED_HOST
+
+usage()
+{
+	cat <<END
+Usage: $0 [options] [stage]
+
+Options:
+    -c          IP address or hostname of existing cluster node
+    -h          Display this usage information
+
+Stage can be one of:
+    ssh         Obtain ssh key from existing cluster node (requires -c <ip>)
+
+If stage is not specified, each stage will be invoked in sequence.
+END
+	exit 0
+}
+
 join_ssh()
 {
-	[ -n "$1" ] || error "No seed IP/hostname specified"
+	[ -n "$SEED_HOST" ] || error "No seed IP/hostname specified"
 
 	start_service sshd
 
@@ -39,7 +58,7 @@ join_ssh()
 	fi
 
 	invoke scp -oStrictHostKeyChecking=no \
-		root@$1:'/root/.ssh/id_rsa*' /root/.ssh/ || \
+		root@$SEED_HOST:'/root/.ssh/id_rsa*' /root/.ssh/ || \
 		error "Can't retrieve SSH keys from $1"
 	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
@@ -48,5 +67,26 @@ join_ssh()
 #{
 #}
 
-join_ssh $1
+while getopts 'c:h' o; do
+	case $o in
+	c) SEED_HOST=$OPTARG;;
+	h) usage;;
+	esac
+done
 
+shift $(($OPTIND - 1))
+
+case $1 in
+ssh)
+	log_start
+	join_$1
+	;;
+"")
+	log_start
+	join_ssh
+	;;
+*)	echo -e "Invalid stage ($1)\n"
+	usage
+esac
+
+exit 0
