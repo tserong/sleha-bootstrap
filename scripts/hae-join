@@ -35,6 +35,8 @@ Usage: $0 [options] [stage]
 Options:
     -c          IP address or hostname of existing cluster node
     -h          Display this usage information
+    -q          Be quiet (don't describe what's happening, just do it)
+    -y          Answer "yes" to all prompts (use with care)
 
 Stage can be one of:
     ssh         Obtain ssh key from existing cluster node (requires -c <ip>)
@@ -67,10 +69,12 @@ join_ssh()
 #{
 #}
 
-while getopts 'c:h' o; do
+while getopts 'c:hqy' o; do
 	case $o in
 	c) SEED_HOST=$OPTARG;;
 	h) usage;;
+	q) BE_QUIET=true;;
+	y) YES_TO_ALL=true;;
 	esac
 done
 

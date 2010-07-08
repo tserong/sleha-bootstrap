@@ -24,24 +24,26 @@
 #
 
 declare -r LOG_FILE=/var/log/hae-bootstrap.log
+declare BE_QUIET=false
+declare YES_TO_ALL=false
 
 # Broken out as special case for log() failure.  Ordinarily you
 # should just use error() to terminate.
 _die()
 {
-	echo "ERROR: $1" >&2
+	echo "ERROR: $@" >&2
 	exit 1
 }
 
 error()
 {
-	log "ERROR: $1"
-	_die $1
+	log "ERROR: $@"
+	_die $@
 }
 
 log()
 {
-	echo $1 >> $LOG_FILE || _die "Can't append to $LOG_FILE - aborting"
+	echo $@ >> $LOG_FILE || _die "Can't append to $LOG_FILE - aborting"
 }
 
 # Execute something and log it same as "set -x" would do (so you can see
@@ -71,10 +73,10 @@ start_service()
 	fi
 }
 
-# Interactive, but because it's in a function we can easily add a
-# "yes-to-all" flag later
 prompt_for_overwrite()
 {
+	$YES_TO_ALL && return 0
+
 	local tmp
 	read -e -p "  $1 - overwrite? [y/N] " tmp
 	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1

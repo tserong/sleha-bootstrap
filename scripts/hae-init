@@ -32,6 +32,8 @@ Usage: $0 [options] [stage]
 
 Options:
     -h          Display this usage information
+    -q          Be quiet (don't describe what's happening, just do it)
+    -y          Answer "yes" to all prompts (use with care)
 
 Stage can be one of:
     ssh         Create ssh key for passwordless ssh between cluster nodes
@@ -63,9 +65,11 @@ init_ssh()
 #{
 #}
 
-while getopts 'h' o; do
+while getopts 'hqy' o; do
 	case $o in
 	h) usage;;
+	q) BE_QUIET=true;;
+	y) YES_TO_ALL=true;;
 	esac
 done
 
