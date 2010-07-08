@@ -25,20 +25,28 @@
 
 declare -r LOG_FILE=/var/log/hae-bootstrap.log
 
-# TODO: Really want 1 char prefix for regular log lines to dintinguish 
-# from output.  Likewise for error lines...
-log()
+# Broken out as special case for log() failure.  Ordinarily you
+# should just use error() to terminate.
+_die()
 {
-	echo $1 >> $LOG_FILE
+	echo "ERROR: $1" >&2
+	exit 1
 }
 
 error()
 {
 	log "ERROR: $1"
-	echo "ERROR: $1" >&2
-	exit 1
+	_die $1
 }
 
+log()
+{
+	echo $1 >> $LOG_FILE || _die "Can't append to $LOG_FILE - aborting"
+}
+
+# Execute something and log it same as "set -x" would do (so you can see
+# stdout and stderr from invoked command, and can also copy the command
+# itself from the log file and execute manually later if necessary). 
 invoke()
 {
 	local rc
@@ -94,9 +102,13 @@ _onexit()
 
 log_start()
 {
-	trap _onexit 0 1 2 3 10 12 13 14 15
-
+	# Convenient side-effect: this will die immediately if the log file
+	# is not writable (e.g. if not running as root)
 	log '================================================================'
 	log "$(date --rfc-3339=seconds) $0 $*"
 	log '----------------------------------------------------------------'
+
+	# Now that we know we have at least some chance of running, catch
+	# all the interesting signals so we can terminate the log neatly.
+	trap _onexit 0 1 2 3 10 12 13 14 15
 }

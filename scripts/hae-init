@@ -34,7 +34,7 @@ Options:
     -h          Display this usage information
 
 Stage can be one of:
-    ssh         Create ssh key for passwordless ssh between nodes
+    ssh         Create ssh key for passwordless ssh between cluster nodes
 
 If stage is not specified, each stage will be invoked in sequence.
 END
