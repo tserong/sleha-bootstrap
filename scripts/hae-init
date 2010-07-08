@@ -37,6 +37,7 @@ Options:
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
+    csync2      Configure csync2
 
 If stage is not specified, each stage will be invoked in sequence.
 END
@@ -57,14 +58,92 @@ init_ssh()
 
 	status "Generating ssh key"
 	invoke ssh-keygen -q -f /root/.ssh/id_rsa \
-		-C 'Cluster Internal' -N '' || \
-		error "Failed to generate SSH key"
+		-C 'Cluster Internal' -N '' \
+		|| error "Failed to generate SSH key"
+	# TODO: if run multiple times, results in multiple additions!
 	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
 
-#init_csync2()
-#{
-#}
+init_csync2()
+{
+	status "Configuring csync2"
+
+	if [ -f "$CSYNC2_KEY" ] || \
+		grep -v -q -s '^[[:space:]]*\(#.*\)*$' $CSYNC2_CFG
+	then
+		prompt_for_overwrite 'csync2 is already configured' || return
+	fi
+
+	invoke rm -f $CSYNC2_KEY
+	status_long "Generating csync2 shared key (this may take a while)"
+	# On a quiet VM, "a while" can be "way too long" (not enough entropy)
+	invoke csync2 -k $CSYNC2_KEY || error "Can't create csync2 key $keyfile"
+	status_done
+
+	local tmp_conf=${CSYNC2_CFG}.$$
+	cat > $tmp_conf <<END
+group ha_group
+{
+	key /etc/csync2/key_hagroup;
+	host $(hostname);
+	include /etc/corosync/corosync.conf;
+	include /etc/corosync/authkey;
+	include /etc/csync2/csync2.cfg;
+	include /etc/csync2/key_hagroup;
+	include /etc/ctdb/nodes;
+	include /etc/drbd.d;
+	include /etc/ha.d/ldirectord.cf;
+	include /etc/lvm/lvm.conf;
+	include /etc/multipath.conf;
+	include /etc/samba/smb.conf;
+	include /etc/sysconfig/openais;
+	include /etc/sysconfig/pacemaker;
+	include /etc/sysconfig/sbd;
+}
+END
+	install_tmp $tmp_conf $CSYNC2_CFG
+
+	# Can't use start_service for csync2, because it runs inside xinetd
+	status "Enabling csync2 service"
+	invoke chkconfig csync2 on
+	start_service xinetd
+
+	status "csync2 checking files"
+	invoke csync2 -cr /
+}
+
+# It would be nice if we could just have csync2.cfg include a directory,
+# which in turn included one file per node which would be referenced via
+# something like "group ha_group { ... config: /etc/csync2/hosts/*; }"
+# That way, adding a new node would just mean adding a single new file
+# to that directory.  Unfortunately, the 'config' statement only allows
+# inclusion of specific individual files, not multiple files via wildcard.
+# So we have this function which is called by hae-join to add the new
+# remote node to csync2 config on some existing node.  It is intentionally
+# not documented in hae-init's user-visible usage information.
+init_csync2_remote()
+{
+	local newhost=$1
+	local thishost=$(hostname)
+	[ -n "$newhost" ] || error "Hostname not specified"
+
+	BE_QUIET=true
+
+	# If host doesn't already exist in csync2 config, add it
+	if ! egrep -q -s \
+		"^[[:space:]]*host.*[[:space:]]+${newhost}[[:space:];]" \
+		$CSYNC2_CFG
+	then
+		local tmp_conf=${CSYNC2_CFG}.$$
+		awk '/^[[:space:]]*host[[:space:]]/ \
+			{ if (h==0) print "\thost '$newhost';"; h=1; } \
+			{ print $0 } ' $CSYNC2_CFG > $tmp_conf
+		install_tmp $tmp_conf $CSYNC2_CFG
+		invoke csync2 -c $CSYNC2_CFG
+	else
+		log ": Nothing to do - remote host $newhost already exists"
+	fi
+}
 
 while getopts 'hqy' o; do
 	case $o in
@@ -77,13 +156,15 @@ done
 shift $(($OPTIND - 1))
 
 case $1 in
-ssh)
+ssh|csync2|csync2_remote)
 	log_start
-	init_$1
+	# $2 == nasty hack to pick up IP arg to csync2_remote
+	init_$1 $2
 	;;
 "")
 	log_start
 	init_ssh
+	init_csync2
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage

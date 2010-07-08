@@ -23,8 +23,11 @@
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
 
-declare -r LOG_FILE=/var/log/hae-bootstrap.log
 declare -r INVOCATION="$0 $*"
+declare -r LOG_FILE=/var/log/hae-bootstrap.log
+declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
+declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
+
 declare BE_QUIET=false
 declare YES_TO_ALL=false
 
@@ -79,8 +82,19 @@ start_service()
 status()
 {
 	$BE_QUIET && return
-
 	echo "$1"
+}
+
+status_long()
+{
+	$BE_QUIET && return
+	echo -n "$1..."
+}
+
+status_done()
+{
+	$BE_QUIET && return
+	echo "done"
 }
 
 prompt_for_overwrite()
@@ -91,6 +105,15 @@ prompt_for_overwrite()
 	read -e -p "  $1 - overwrite? [y/N] " tmp
 	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1
 	return 0
+}
+
+install_tmp()
+{
+	log ": created $1 with content:"
+	cat $1 >> $LOG_FILE
+	invoke sync
+	invoke mv -f $1 $2
+	[ $? -ne 0 ] && error "Failed to install $2 (temp is $1)"
 }
 
 # TODO: is there a better way to do this?  I just want to log

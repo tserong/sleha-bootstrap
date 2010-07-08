@@ -61,14 +61,33 @@ join_ssh()
 
 	status "Retrieving SSH keys from $SEED_HOST"
 	invoke scp -oStrictHostKeyChecking=no \
-		root@$SEED_HOST:'/root/.ssh/id_rsa*' /root/.ssh/ || \
-		error "Can't retrieve SSH keys from $SEED_HOST"
+		root@$SEED_HOST:'/root/.ssh/id_rsa*' /root/.ssh/ \
+		|| error "Can't retrieve SSH keys from $SEED_HOST"
+	# TODO: if run multiple times, results in multiple additions!
 	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
 
-#join_csync2()
-#{
-#}
+join_csync2()
+{
+	status "Configuring csync2"
+
+	invoke ssh root@$SEED_HOST hae-init csync2_remote $(hostname) \
+		|| error "Can't invoke hae-init csync2_remote on $SEED_HOST"
+
+	invoke scp root@$SEED_HOST:'/etc/csync2/{csync2.cfg,key_hagroup}' \
+		/etc/csync2 \
+		|| error "Can't retrieve csync2 config from $SEED_HOST"
+
+	# Can't use start_service for csync2, because it runs inside xinetd
+	status "Enabling csync2 service"
+	invoke chkconfig csync2 on
+	start_service xinetd
+
+	# TODO: is there a better way to force everything here to be
+	# sync'd to the new node than "-mr /"?  Surely that shouldn't
+	# really be necessary...
+	invoke ssh root@$SEED_HOST 'csync2 -mr / ; csync2 -xv'
+}
 
 while getopts 'c:hqy' o; do
 	case $o in
@@ -89,6 +108,7 @@ ssh)
 "")
 	log_start
 	join_ssh
+	join_csync2
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage
