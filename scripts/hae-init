@@ -37,7 +37,6 @@ init_ssh()
 		invoke rm -f /root/.ssh/id_rsa
 	fi
 
-	# TODO: -C & -N args aren't quoted in log (*sigh*)
 	invoke ssh-keygen -q -f /root/.ssh/id_rsa \
 		-C 'Cluster Internal' -N '' || \
 		error "Failed to generate SSH key"

@@ -43,9 +43,7 @@ invoke()
 {
 	local rc
 
-	# TODO: needs to quote args, else you can't just copy & paste
-	# log lines to exec manually...
-	echo "+ $@" >> $LOG_FILE
+	echo + $(printf '%q ' "$@") >> $LOG_FILE
 
 	set -f
 	"$@" >> $LOG_FILE 2>&1
@@ -76,9 +74,26 @@ prompt_for_overwrite()
 }
 
 # TODO: is there a better way to do this?  I just want to log
-# the "cat >>" niceley...
+# the "cat >>" nicely...
 append()
 {
 	log "+ cat $1 >> $2"
 	cat $1 >> $2
 }
+
+_onexit()
+{
+	local rc=${1:-$?}
+	log '----------------------------------------------------------------'
+	log "$(date --rfc-3339=seconds) exited (rc=$rc)"
+	log '================================================================'
+	# don't double-trap on normal exit
+	trap - 0
+	exit $rc
+}
+
+trap _onexit 0 1 2 3 10 12 13 14 15
+
+log '================================================================'
+log "$(date --rfc-3339=seconds) $0 $*"
+log '----------------------------------------------------------------'
