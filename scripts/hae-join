@@ -39,7 +39,7 @@ Options:
     -y          Answer "yes" to all prompts (use with care)
 
 Stage can be one of:
-    ssh         Obtain ssh key from existing cluster node (requires -c <ip>)
+    ssh         Obtain SSH keys from existing cluster node (requires -c <ip>)
 
 If stage is not specified, each stage will be invoked in sequence.
 END
@@ -48,7 +48,7 @@ END
 
 join_ssh()
 {
-	[ -n "$SEED_HOST" ] || error "No seed IP/hostname specified"
+	[ -n "$SEED_HOST" ] || error "No seed IP/hostname specified (use -c option)"
 
 	start_service sshd
 
@@ -59,9 +59,10 @@ join_ssh()
 			'/root/.ssh/id_rsa already exists' || return
 	fi
 
+	status "Retrieving SSH keys from $SEED_HOST"
 	invoke scp -oStrictHostKeyChecking=no \
 		root@$SEED_HOST:'/root/.ssh/id_rsa*' /root/.ssh/ || \
-		error "Can't retrieve SSH keys from $1"
+		error "Can't retrieve SSH keys from $SEED_HOST"
 	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
 
@@ -93,4 +94,5 @@ ssh)
 	usage
 esac
 
+status "Done"
 exit 0

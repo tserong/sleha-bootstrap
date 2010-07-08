@@ -24,6 +24,7 @@
 #
 
 declare -r LOG_FILE=/var/log/hae-bootstrap.log
+declare -r INVOCATION="$0 $*"
 declare BE_QUIET=false
 declare YES_TO_ALL=false
 
@@ -65,12 +66,21 @@ invoke()
 
 start_service()
 {
+	status "Enabling $1 service"
+
 	invoke chkconfig $1 on
 	rc$1 status >/dev/null
 	if [ $? -ne 0 ]; then
 		invoke rc$1 start
 		[ $? -ne 0 ] && error "Failed to start $1 service"
 	fi
+}
+
+status()
+{
+	$BE_QUIET && return
+
+	echo "$1"
 }
 
 prompt_for_overwrite()
@@ -107,7 +117,7 @@ log_start()
 	# Convenient side-effect: this will die immediately if the log file
 	# is not writable (e.g. if not running as root)
 	log '================================================================'
-	log "$(date --rfc-3339=seconds) $0 $*"
+	log "$(date --rfc-3339=seconds) $INVOCATION"
 	log '----------------------------------------------------------------'
 
 	# Now that we know we have at least some chance of running, catch

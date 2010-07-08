@@ -36,7 +36,7 @@ Options:
     -y          Answer "yes" to all prompts (use with care)
 
 Stage can be one of:
-    ssh         Create ssh key for passwordless ssh between cluster nodes
+    ssh         Create SSH keys for passwordless SSH between cluster nodes
 
 If stage is not specified, each stage will be invoked in sequence.
 END
@@ -55,6 +55,7 @@ init_ssh()
 		invoke rm -f /root/.ssh/id_rsa
 	fi
 
+	status "Generating ssh key"
 	invoke ssh-keygen -q -f /root/.ssh/id_rsa \
 		-C 'Cluster Internal' -N '' || \
 		error "Failed to generate SSH key"
@@ -88,4 +89,5 @@ ssh)
 	usage
 esac
 
+status "Done"
 exit 0
