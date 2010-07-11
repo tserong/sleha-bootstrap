@@ -40,6 +40,7 @@ Options:
 
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <ip>)
+    csync2      Configure csync2 (requires -c <ip>)
 
 If stage is not specified, each stage will be invoked in sequence.
 END
