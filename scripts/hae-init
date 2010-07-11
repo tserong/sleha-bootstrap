@@ -38,6 +38,7 @@ Options:
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
+    corosync    Configure corosync
 
 If stage is not specified, each stage will be invoked in sequence.
 END
@@ -145,6 +146,122 @@ init_csync2_remote()
 	fi
 }
 
+# TODO: handle -q and -y
+init_corosync()
+{
+	local bindnetaddr
+	local mcastaddr
+	local mcastport
+	local tmp
+	local default
+
+	status "
+Configure Corosync:
+  This will configure the cluster messaging layer.  You will need
+  to specify a network address over which to communicate (default
+  is ${NET_IF}'s network, but you can use the network address of any
+  active interface), a multicast address and multicast port.
+"
+
+	if [ -f "$COROSYNC_CONF" ]; then
+		prompt_for_overwrite \
+			"$COROSYNC_CONF already exists" || return
+	fi
+
+	default=$IP_NETWORK
+	while [ -z "$bindnetaddr" ]; do
+		read -e -p "  Network address to bind to (e.g.: 192.168.1.0) [$default] " tmp
+		[ -n "$tmp" ] && default=$tmp
+		[[ "$default" =~ ([0-9]+\.){3}[0-9]+ ]] && bindnetaddr=$default || echo "    That doesn't look like a network address"
+	done
+
+	default=239.$(random_256).$(random_256).$(random_256)
+	while [ -z "$mcastaddr" ]; do
+		read -e -p "  Multicast address (e.g.: 239.x.x.x) [$default] " tmp
+		[ -n "$tmp" ] && default=$tmp
+		[[ "$default" =~ ([0-9]+\.){3}[0-9]+ ]] && mcastaddr=$default || echo "    That doesn't look like a multicast address"
+	done
+
+	default=5405
+	while [ -z "$mcastport" ]; do
+		read -e -p "  Multicast port [$default] " tmp
+		[ -n "$tmp" ] && default=$tmp
+		[[ "$default" =~ [0-9]+ ]] && mcastport=$default || echo "    That doesn't look like a port number"
+	done
+
+	# Config defaults from yast2-cluster (SLE 11 SP1 HAE)
+	# TODO: get this from example config file by default!
+	local tmp_conf=${COROSYNC_CONF}.$$
+	cat > $tmp_conf <<END
+aisexec {
+	#Group to run aisexec as. Needs to be root for Pacemaker
+	group:	root
+	#User to run aisexec as. Needs to be root for Pacemaker
+	user:	root
+}
+service {
+	#Default to start mgmtd with pacemaker
+	use_mgmtd:	yes
+	ver:	0
+	name:	pacemaker
+}
+totem {
+	#The mode for redundant ring. None is used when only 1 interface specified, otherwise, only active or passive may be choosen
+	rrp_mode:	none
+	#How long to wait for join messages in membership protocol. in ms
+	join:	60
+	#The only valid version is 2
+	version:	2
+	#The virtual synchrony filter type used to indentify a primary component. Change with care.
+	vsftype:	none
+	#Timeout for a token lost. in ms
+	token:	3000
+	#How long to wait for consensus to be achieved before starting a new round of membership configuration.
+	consensus:	4000
+	#HMAC/SHA1 should be used to authenticate all message
+	secauth:	off
+	#How many token retransmits should be attempted before forming a new configuration.
+	token_retransmits_before_loss_const:	10
+	interface {
+		#Network Address to be bind for this interface setting
+		bindnetaddr:	$bindnetaddr
+		#The multicast address to be used
+		mcastaddr:	$mcastaddr
+		#The multicast port to be used
+		mcastport:	$mcastport
+		#The ringnumber assigned to this interface setting
+		ringnumber:	0
+	}
+	#To make sure the auto-generated nodeid is positive
+	clear_node_high_bit:	yes
+	#The maximum number of messages that may be sent by one processor on receipt of the token.
+	max_messages:	20
+}
+logging {
+	#Log to a specified file
+	to_logfile:	no
+	#Log timestamp as well
+	timestamp:	on
+	#Facility in syslog
+	syslog_facility:	daemon
+	#Log to syslog
+	to_syslog:	yes
+	#Whether or not turning on the debug information in the log
+	debug:	off
+	#Log to the standard error output
+	to_stderr:	yes
+	#Logging file line in the source code as well
+	fileline:	off
+}
+amf {
+	#Enable or disable AMF
+	mode:	disable
+}
+END
+	install_tmp $tmp_conf $COROSYNC_CONF
+	invoke csync2 -xv $COROSYNC_CONF
+}
+
 while getopts 'hqy' o; do
 	case $o in
 	h) usage;;
@@ -156,7 +273,7 @@ done
 shift $(($OPTIND - 1))
 
 case $1 in
-ssh|csync2|csync2_remote)
+ssh|csync2|csync2_remote|corosync)
 	log_start
 	# $2 == nasty hack to pick up IP arg to csync2_remote
 	init_$1 $2
@@ -165,6 +282,7 @@ ssh|csync2|csync2_remote)
 	log_start
 	init_ssh
 	init_csync2
+	init_corosync
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage

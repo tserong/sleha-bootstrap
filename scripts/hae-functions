@@ -27,9 +27,13 @@ declare -r INVOCATION="$0 $*"
 declare -r LOG_FILE=/var/log/hae-bootstrap.log
 declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
 declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
+declare -r COROSYNC_CONF=/etc/corosync/corosync.conf
 
 declare BE_QUIET=false
 declare YES_TO_ALL=false
+declare NET_IF=eth0
+declare IP_ADDRESS
+declare IP_NETWORK
 
 # Broken out as special case for log() failure.  Ordinarily you
 # should just use error() to terminate.
@@ -116,6 +120,13 @@ install_tmp()
 	[ $? -ne 0 ] && error "Failed to install $2 (temp is $1)"
 }
 
+random_256()
+{
+	local -i n=$RANDOM
+	let 'n %= 256'
+	echo $n
+}
+
 # TODO: is there a better way to do this?  I just want to log
 # the "cat >>" nicely...
 append()
@@ -146,4 +157,20 @@ log_start()
 	# Now that we know we have at least some chance of running, catch
 	# all the interesting signals so we can terminate the log neatly.
 	trap _onexit 0 1 2 3 10 12 13 14 15
+
+	# log_start() is a bit of a misnomer, we also set up some globals...
+
+	# Auto-detection of IP address and netmask only works if $NET_IF is
+	# up. If $IP_ADDRESS is overridden, network detect shouldn't work,
+	# because "ip route" won't be able to help us.
+	if [ -z "$IP_ADDRESS" ]; then
+		IP_ADDRESS=$(ip -o -f inet addr show | \
+			awk "/[[:space:]]${NET_IF}[[:space:]]/ {print \$4} " |
+			sed 's/\/[1-9][1-9]//')
+	fi
+	if [ -z "$IP_NETWORK" -a -n "$IP_ADDRESS" ]; then
+		IP_NETWORK=$(ip route list | \
+			awk "/${IP_ADDRESS}/ { print \$1; }" |
+			sed 's/\/[1-9][1-9]//')
+	fi
 }
