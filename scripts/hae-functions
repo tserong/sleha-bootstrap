@@ -49,6 +49,12 @@ error()
 	_die $@
 }
 
+warn()
+{
+	log "WARNING: $@"
+	echo "WARNING: $@" >&2
+}
+
 log()
 {
 	echo $@ >> $LOG_FILE || _die "Can't append to $LOG_FILE - aborting"
@@ -109,6 +115,31 @@ prompt_for_overwrite()
 	read -e -p "  $1 - overwrite? [y/N] " tmp
 	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1
 	return 0
+}
+
+prompt_for_string()
+{
+	local msg=$1
+	local match=$2
+	local default=$3
+	local val
+	local tmp
+
+	if $YES_TO_ALL; then
+		# Warning: this will return an empty string if
+		# there's no default - callers be prepared!
+		echo $default
+		return
+	fi
+
+	while [ -z "$val" ]; do
+		read -e -p "  $msg [$default] " tmp
+		[ -n "$tmp" ] && default=$tmp
+		[[ "$default" =~ $match ]] && val=$default \
+			|| echo "    Invalid value entered" >&2
+	done
+
+	echo $default
 }
 
 install_tmp()
@@ -173,4 +204,9 @@ log_start()
 			awk "/${IP_ADDRESS}/ { print \$1; }" |
 			sed 's/\/[1-9][1-9]//')
 	fi
+
+	[ -z "$IP_ADDRESS" ] && \
+		warn "Could not detect IP address for $NET_IF"
+	[ -z "$IP_NETWORK" ] && \
+		warn "Could not detect network address for $NET_IF"
 }

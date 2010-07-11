@@ -149,45 +149,38 @@ init_csync2_remote()
 # TODO: handle -q and -y
 init_corosync()
 {
-	local bindnetaddr
-	local mcastaddr
-	local mcastport
-	local tmp
-	local default
-
-	status "
+	if $YES_TO_ALL; then
+		status 'Configuring corosync'
+	else
+		status "
 Configure Corosync:
   This will configure the cluster messaging layer.  You will need
   to specify a network address over which to communicate (default
   is ${NET_IF}'s network, but you can use the network address of any
   active interface), a multicast address and multicast port.
 "
+	fi
 
 	if [ -f "$COROSYNC_CONF" ]; then
 		prompt_for_overwrite \
 			"$COROSYNC_CONF already exists" || return
 	fi
 
-	default=$IP_NETWORK
-	while [ -z "$bindnetaddr" ]; do
-		read -e -p "  Network address to bind to (e.g.: 192.168.1.0) [$default] " tmp
-		[ -n "$tmp" ] && default=$tmp
-		[[ "$default" =~ ([0-9]+\.){3}[0-9]+ ]] && bindnetaddr=$default || echo "    That doesn't look like a network address"
-	done
+	local bindnetaddr=$(prompt_for_string \
+		'Network address to bind to (e.g.: 192.168.1.0)' \
+		'([0-9]+\.){3}[0-9]+' "$IP_NETWORK")
+	[ -z "$bindnetaddr" ] && error 'No value for bindnetaddr'
 
-	default=239.$(random_256).$(random_256).$(random_256)
-	while [ -z "$mcastaddr" ]; do
-		read -e -p "  Multicast address (e.g.: 239.x.x.x) [$default] " tmp
-		[ -n "$tmp" ] && default=$tmp
-		[[ "$default" =~ ([0-9]+\.){3}[0-9]+ ]] && mcastaddr=$default || echo "    That doesn't look like a multicast address"
-	done
+	local mcastaddr=$(prompt_for_string \
+		'Multicast address (e.g.: 239.x.x.x)' \
+		'([0-9]+\.){3}[0-9]+' \
+		239.$(random_256).$(random_256).$(random_256))
+	[ -z "$mcastaddr" ] && error 'No value for mcastaddr'
 
-	default=5405
-	while [ -z "$mcastport" ]; do
-		read -e -p "  Multicast port [$default] " tmp
-		[ -n "$tmp" ] && default=$tmp
-		[[ "$default" =~ [0-9]+ ]] && mcastport=$default || echo "    That doesn't look like a port number"
-	done
+	local mcastport=$(prompt_for_string \
+		'Multicast port' \
+		'[0-9]+' 5405);
+	[ -z "$mcastport" ] && error 'No value for mcastport'
 
 	# Config defaults from yast2-cluster (SLE 11 SP1 HAE)
 	# TODO: get this from example config file by default!
