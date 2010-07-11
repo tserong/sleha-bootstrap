@@ -107,6 +107,16 @@ status_done()
 	echo "done"
 }
 
+wait_for_cluster()
+{
+	status_long "Waiting for cluster"
+	while ! crm_mon -1 | grep -qi online; do
+		! $BE_QUIET && echo -n "."
+		sleep 5
+	done
+	status_done
+}
+
 prompt_for_overwrite()
 {
 	$YES_TO_ALL && return 0
