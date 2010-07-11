@@ -117,6 +117,34 @@ wait_for_cluster()
 	status_done
 }
 
+init_cluster_local()
+{
+	# Caller checks this, but I'm paranoid...
+	rcopenais status >/dev/null
+	[ $rc -ne 7 ] && error "openais service is not stopped!"
+
+	# reset password, but only if it's not already set
+	local ps=$(passwd -S hacluster 2>/dev/null | cut -d' ' -f2)
+	local pass_msg
+	if [ "$ps" != "PS" ]; then
+		log ': Resetting password of hacluster user'
+		echo "linux" | passwd --stdin hacluster > /dev/null
+		pass_msg=", password 'linux'"
+	fi
+
+	# evil, but necessary
+	invoke rm -f /var/lib/heartbeat/crm/*
+
+	start_service hawk
+	status "  HA Web Konsole is now running, to see cluster status go to:"
+	[ -n "$IP_ADDRESS" ] && status "    https://$IP_ADDRESS:7630/" \
+		|| status "    https://SERVER:7630/"
+	status "  Log in with username 'hacluster'${pass_msg}"
+
+	start_service openais
+	wait_for_cluster
+}
+
 prompt_for_overwrite()
 {
 	$YES_TO_ALL && return 0

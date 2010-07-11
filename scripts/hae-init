@@ -39,6 +39,7 @@ Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
+    cluster     Bring the cluster online
 
 If stage is not specified, each stage will be invoked in sequence.
 END
@@ -146,7 +147,6 @@ init_csync2_remote()
 	fi
 }
 
-# TODO: handle -q and -y
 init_corosync()
 {
 	if $YES_TO_ALL; then
@@ -255,6 +255,41 @@ END
 	invoke csync2 -xv $COROSYNC_CONF
 }
 
+init_cluster()
+{
+	# TODO: move this check outwards (probably only don't want it for
+	# ssh config & csync2_remote)
+	rcopenais status >/dev/null
+	rc=$?
+	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
+	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
+
+	init_cluster_local
+
+	local -i node_count=$(crmadmin -N|grep 'node'|wc -l)
+	[ "$node_count" -lt 1 ] && error "No nodes found in cluster"
+	[ "$node_count" -gt 1 ] && error "Joined existing cluster - will not reconfigure."
+
+	status "Loading initial configuration"
+	# TODO: should log injected config
+	local tmp_conf=/tmp/crm.$$
+	cat > $tmp_conf <<END
+property \$id="cib-bootstrap-options" \
+	stonith-enabled="true" \
+	no-quorum-policy="ignore" \
+	placement-strategy="balanced"
+op_defaults \$id="op-options" \
+	timeout="600" \
+	record-pending="true"
+rsc_defaults \$id="rsc-options" \
+	resource-stickiness="1" \
+	migration-threshold="3"
+END
+	invoke crm configure load replace $tmp_conf \
+		|| error "Failed to load cluster configuration from $tmp_conf"
+	invoke rm $tmp_conf
+}
+
 while getopts 'hqy' o; do
 	case $o in
 	h) usage;;
@@ -266,7 +301,7 @@ done
 shift $(($OPTIND - 1))
 
 case $1 in
-ssh|csync2|csync2_remote|corosync)
+ssh|csync2|csync2_remote|corosync|cluster)
 	log_start
 	# $2 == nasty hack to pick up IP arg to csync2_remote
 	init_$1 $2
@@ -276,6 +311,7 @@ ssh|csync2|csync2_remote|corosync)
 	init_ssh
 	init_csync2
 	init_corosync
+	init_cluster
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage
