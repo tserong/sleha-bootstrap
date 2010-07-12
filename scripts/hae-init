@@ -182,75 +182,64 @@ Configure Corosync:
 		'[0-9]+' 5405);
 	[ -z "$mcastport" ] && error 'No value for mcastport'
 
-	# Config defaults from yast2-cluster (SLE 11 SP1 HAE)
-	# TODO: get this from example config file by default!
 	local tmp_conf=${COROSYNC_CONF}.$$
-	cat > $tmp_conf <<END
+	if grep -q -s '^[[:space:]]*name:[[:space:]]*pacemaker' ${COROSYNC_CONF}.example; then
+		# "name: pacemaker" in corosync example conf is our assumption
+		# that the example is sane, so use it:
+		sed \
+			-e 's/^\([[:space:]]*bindnetaddr:[[:space:]]*\).*/\1'$bindnetaddr'/' \
+			-e 's/^\([[:space:]]*mcastaddr:[[:space:]]*\).*/\1'$mcastaddr'/' \
+			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
+			/etc/corosync/corosync.conf.example > $tmp_conf
+	else
+		# Fallback to sane config (defaults from SLE 11 SP1 HAE
+		# corosync.conf.example.patch)
+		cat > $tmp_conf <<END
+# Please read the corosync.conf.5 manual page
+compatibility: whitetank
 aisexec {
-	#Group to run aisexec as. Needs to be root for Pacemaker
-	group:	root
-	#User to run aisexec as. Needs to be root for Pacemaker
-	user:	root
+	group:		root
+	user:		root
 }
 service {
-	#Default to start mgmtd with pacemaker
+	ver:		0
+	name:		pacemaker
 	use_mgmtd:	yes
-	ver:	0
-	name:	pacemaker
+	use_logd:	yes
 }
 totem {
-	#The mode for redundant ring. None is used when only 1 interface specified, otherwise, only active or passive may be choosen
-	rrp_mode:	none
-	#How long to wait for join messages in membership protocol. in ms
-	join:	60
-	#The only valid version is 2
 	version:	2
-	#The virtual synchrony filter type used to indentify a primary component. Change with care.
+	token:		5000
+	token_retransmits_before_loss_const: 10
+	join:		60
+	consensus:	6000
 	vsftype:	none
-	#Timeout for a token lost. in ms
-	token:	3000
-	#How long to wait for consensus to be achieved before starting a new round of membership configuration.
-	consensus:	4000
-	#HMAC/SHA1 should be used to authenticate all message
-	secauth:	off
-	#How many token retransmits should be attempted before forming a new configuration.
-	token_retransmits_before_loss_const:	10
-	interface {
-		#Network Address to be bind for this interface setting
-		bindnetaddr:	$bindnetaddr
-		#The multicast address to be used
-		mcastaddr:	$mcastaddr
-		#The multicast port to be used
-		mcastport:	$mcastport
-		#The ringnumber assigned to this interface setting
-		ringnumber:	0
-	}
-	#To make sure the auto-generated nodeid is positive
-	clear_node_high_bit:	yes
-	#The maximum number of messages that may be sent by one processor on receipt of the token.
 	max_messages:	20
+	clear_node_high_bit: yes
+	secauth:	off
+	threads:	0
+	interface {
+		ringnumber:	0
+		bindnetaddr:	$bindnetaddr
+		mcastaddr:	$mcastaddr
+		mcastport:	$mcastport
+	}
 }
 logging {
-	#Log to a specified file
-	to_logfile:	no
-	#Log timestamp as well
-	timestamp:	on
-	#Facility in syslog
-	syslog_facility:	daemon
-	#Log to syslog
-	to_syslog:	yes
-	#Whether or not turning on the debug information in the log
-	debug:	off
-	#Log to the standard error output
-	to_stderr:	yes
-	#Logging file line in the source code as well
 	fileline:	off
+	to_stderr:	no
+	to_logfile:	no
+	timestamp:	on
+	to_syslog:	yes
+	syslog_facility: daemon
+	debug:		off
+	timestamp:	off
 }
 amf {
-	#Enable or disable AMF
 	mode:	disable
 }
 END
+	fi
 	install_tmp $tmp_conf $COROSYNC_CONF
 	invoke csync2 -xv $COROSYNC_CONF
 }
