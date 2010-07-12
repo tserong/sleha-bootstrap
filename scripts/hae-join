@@ -93,14 +93,10 @@ join_csync2()
 
 join_cluster()
 {
-	# TODO: move this check outwards (probably only don't want it for ssh config)
-	rcopenais status >/dev/null
-	rc=$?
-	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
-	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
-
 	init_cluster_local
 }
+
+#------------------------------------------------------------------------------
 
 while getopts 'c:hqy' o; do
 	case $o in
@@ -113,6 +109,13 @@ done
 
 shift $(($OPTIND - 1))
 
+if [ "$1" != "ssh" ]; then
+	rcopenais status >/dev/null
+	rc=$?
+	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
+	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
+fi
+
 case $1 in
 ssh|csync2|cluster)
 	log_start
@@ -120,6 +123,20 @@ ssh|csync2|cluster)
 	;;
 "")
 	log_start
+
+	if ! $YES_TO_ALL && [ -z "$SEED_HOST" ]; then
+		status "
+Join This Node to Cluster:
+  You will be asked for the IP address of an existing node, from which
+  configuration will be copied.  If you have not already configured
+  passwordless ssh between nodes, you will be prompted for the root
+  password of the existing node.
+"
+		SEED_HOST=$(prompt_for_string \
+			'IP address of existing node (e.g.: 192.168.1.1)' \
+			'([0-9]+\.){3}[0-9]+')
+	fi
+
 	join_ssh
 	join_csync2
 	join_cluster

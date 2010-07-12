@@ -256,13 +256,6 @@ END
 
 init_cluster()
 {
-	# TODO: move this check outwards (probably only don't want it for
-	# ssh config & csync2_remote)
-	rcopenais status >/dev/null
-	rc=$?
-	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
-	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
-
 	init_cluster_local
 
 	local -i node_count=$(crmadmin -N|grep 'node'|wc -l)
@@ -289,6 +282,8 @@ END
 	invoke rm $tmp_conf
 }
 
+#------------------------------------------------------------------------------
+
 while getopts 'hqy' o; do
 	case $o in
 	h) usage;;
@@ -298,6 +293,13 @@ while getopts 'hqy' o; do
 done
 
 shift $(($OPTIND - 1))
+
+if [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
+	rcopenais status >/dev/null
+	rc=$?
+	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
+	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
+fi
 
 case $1 in
 ssh|csync2|csync2_remote|corosync|cluster)

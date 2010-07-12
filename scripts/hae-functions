@@ -119,7 +119,7 @@ wait_for_cluster()
 
 init_cluster_local()
 {
-	# Caller checks this, but I'm paranoid...
+	# Caller should check this, but I'm paranoid...
 	rcopenais status >/dev/null
 	[ $rc -ne 7 ] && error "openais service is not stopped!"
 
