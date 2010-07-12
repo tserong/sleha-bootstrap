@@ -65,8 +65,8 @@ join_ssh()
 	invoke scp -oStrictHostKeyChecking=no \
 		root@$SEED_HOST:'/root/.ssh/id_rsa*' /root/.ssh/ \
 		|| error "Can't retrieve SSH keys from $SEED_HOST"
-	# TODO: if run multiple times, results in multiple additions!
-	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+	grep -q -s "$(cat /root/.ssh/id_rsa.pub)" /root/.ssh/authorized_keys \
+		|| append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
 
 join_csync2()
