@@ -62,19 +62,17 @@ log()
 
 # Execute something and log it same as "set -x" would do (so you can see
 # stdout and stderr from invoked command, and can also copy the command
-# itself from the log file and execute manually later if necessary). 
+# itself from the log file and execute manually later if necessary).
+# Somewhat maddeningly (depending on your point of view), pathname
+# expansion means that "invoke rm .../*" logs the individual files
+# removed, not the "rm *".  This is bad (log is expanded command,
+# as opposed to command intended, so you have to be careful manually
+# executing these later), but also good in that it provides a cheap
+# form of auditing...
 invoke()
 {
-	local rc
-
 	echo + $(printf '%q ' "$@") >> $LOG_FILE
-
-	set -f
 	"$@" >> $LOG_FILE 2>&1
-	rc=$?
-	set +f
-
-	return $rc
 }
 
 start_service()
