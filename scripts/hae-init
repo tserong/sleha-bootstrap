@@ -192,7 +192,7 @@ Configure Corosync:
 			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
 			/etc/corosync/corosync.conf.example > $tmp_conf
 	else
-		# Fallback to sane config (defaults from SLE 11 SP1 HAE
+		# Fallback to known sane config (defaults from SLE 11 SP1 HAE
 		# corosync.conf.example.patch)
 		cat > $tmp_conf <<END
 # Please read the corosync.conf.5 manual page
