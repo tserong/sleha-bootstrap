@@ -189,6 +189,16 @@ install_tmp()
 	[ $? -ne 0 ] && error "Failed to install $2 (temp is $1)"
 }
 
+# Call with $1 == replace|update, $2 == file
+crm_configure_load()
+{
+	log ": loading crm config from $2, content is:"
+	cat $2 >> $LOG_FILE
+	invoke crm configure load $1 $2 \
+		|| error "Failed to load cluster configuration from $tmp_conf"
+	invoke rm $2
+}
+
 random_256()
 {
 	local -i n=$RANDOM

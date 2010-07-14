@@ -256,20 +256,18 @@ init_cluster()
 	# TODO: should log injected config
 	local tmp_conf=/tmp/crm.$$
 	cat > $tmp_conf <<END
-property \$id="cib-bootstrap-options" \
-	stonith-enabled="true" \
-	no-quorum-policy="ignore" \
+property \$id="cib-bootstrap-options" \\
+	stonith-enabled="true" \\
+	no-quorum-policy="ignore" \\
 	placement-strategy="balanced"
-op_defaults \$id="op-options" \
-	timeout="600" \
+op_defaults \$id="op-options" \\
+	timeout="600" \\
 	record-pending="true"
-rsc_defaults \$id="rsc-options" \
-	resource-stickiness="1" \
+rsc_defaults \$id="rsc-options" \\
+	resource-stickiness="1" \\
 	migration-threshold="3"
 END
-	invoke crm configure load replace $tmp_conf \
-		|| error "Failed to load cluster configuration from $tmp_conf"
-	invoke rm $tmp_conf
+	crm_configure_load replace $tmp_conf
 }
 
 #------------------------------------------------------------------------------
