@@ -28,6 +28,7 @@ declare -r LOG_FILE=/var/log/hae-bootstrap.log
 declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
 declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
 declare -r COROSYNC_CONF=/etc/corosync/corosync.conf
+declare -r SYSCONFIG_SBD=/etc/sysconfig/sbd
 
 declare BE_QUIET=false
 declare YES_TO_ALL=false

@@ -37,16 +37,19 @@ Usage: $0 [options] [stage]
 Options:
     -h          Display this usage information
     -i <if>     Default to IP address on interface 'if' instead of eth0
-    -p <dev>    Partition this shared storage device
-                (only valid for "storage" stage)
+    -p <dev>    Partition this shared storage device (only valid for
+                "storage" stage)
     -q          Be quiet (don't describe what's happening, just do it)
-    -y          Answer "yes" to all prompts (use with care)
+    -s <dev>    Block device to use for SBD (only valid for "sbd" stage)
+    -y          Answer "yes" to all prompts (use with caution, this is
+                destructive, especially during the "storage" stage)
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
     storage     Partition shared storage
+    sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -357,6 +360,26 @@ Configure Shared Storage:
 	status "Created $OCFS2_DEVICE for OCFS2 partition"
 }
 
+init_sbd()
+{
+	[ -b "$SBD_DEVICE" ] || error "SBD device $SBD_DEVICE does not exist"
+
+	# TODO: need to ensure watchdog is available
+	# (actually, should work if watchdog unavailable, it'll just whine in the logs...)
+	# TODO: what about timeouts for multipath devices?
+	status_long 'Configuring SBD...'
+	invoke sbd -d $SBD_DEVICE create || error "Failed to initialize SBD device"
+	status_done
+
+	local tmp_conf=$SYSCONFIG_SBD.$$
+	cat > $tmp_conf <<END
+SBD_DEVICE="$SBD_DEVICE"
+SBD_OPTS="-W"
+END
+	install_tmp $tmp_conf $SYSCONFIG_SBD
+	invoke csync2 -xv $SYSCONFIG_SBD
+}
+
 init_cluster()
 {
 	init_cluster_local
@@ -384,12 +407,13 @@ END
 
 #------------------------------------------------------------------------------
 
-while getopts 'hi:p:qy' o; do
+while getopts 'hi:p:qs:y' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
 	p) SHARED_DEVICE=$OPTARG;;
 	q) BE_QUIET=true;;
+	s) SBD_DEVICE=$OPTARG;;
 	y) YES_TO_ALL=true;;
 	esac
 done
@@ -404,7 +428,7 @@ if [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
 fi
 
 case $1 in
-ssh|csync2|csync2_remote|corosync|storage|cluster)
+ssh|csync2|csync2_remote|corosync|storage|sbd|cluster)
 	log_start
 	# $2 == nasty hack to pick up IP arg to csync2_remote
 	init_$1 $2
@@ -415,6 +439,7 @@ ssh|csync2|csync2_remote|corosync|storage|cluster)
 	init_csync2
 	init_corosync
 	init_storage
+	init_sbd
 	init_cluster
 	;;
 *)	echo -e "Invalid stage ($1)\n"
