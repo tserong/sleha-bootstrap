@@ -110,7 +110,7 @@ wait_for_cluster()
 {
 	status_long "Waiting for cluster"
 	while ! crm_mon -1 | grep -qi online; do
-		! $BE_QUIET && echo -n "."
+		$BE_QUIET || echo -n "."
 		sleep 5
 	done
 	status_done
@@ -206,6 +206,17 @@ crm_configure_load()
 	invoke crm configure load $1 $2 \
 		|| error "Failed to load cluster configuration from $tmp_conf"
 	invoke rm $2
+}
+
+# Call with $1 == message, $2 == resource
+wait_for_resource()
+{
+	status_long "$1"
+	while ! crm_resource --locate --resource $2 2>&1 | grep -q 'running on'; do
+		$BE_QUIET || echo -n '.'
+		sleep 1
+	done
+	status_done
 }
 
 random_256()

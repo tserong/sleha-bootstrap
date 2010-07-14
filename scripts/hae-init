@@ -431,11 +431,61 @@ END
 init_vgfs()
 {
 	[ -b "$OCFS2_DEVICE" ] || error "OCFS2 device $OCFS2_DEVICE does not exist"
+
+	# TODO: this won't work if the vgfs is run by itself,
+	# and all this stuff already exists in the CIB.
+	# TODO: confiugrable mountpoint and vg name
+	local tmp_conf=/tmp/crm.$$
+	cat > $tmp_conf <<END
+primitive dlm ocf:pacemaker:controld \\
+	op start timeout="90" op stop timeout="100"
+primitive clvm ocf:lvm2:clvmd \\
+	op start timeout="90" op stop timeout="100"
+primitive cmirror ocf:lvm2:cmirrord \\
+	op start timeout="90" op stop timeout="100"
+primitive o2cb ocf:ocfs2:o2cb \\
+	op start timeout="90" op stop timeout="100"
+primitive vg ocf:heartbeat:LVM params volgrpname="clustervg" \\
+	op start timeout="30" op stop timeout="30" \\
+	meta target-role="Stopped"
+primitive filesys ocf:heartbeat:Filesystem \\
+	params directory="/clusterfs" fstype="ocfs2" device="/dev/clustervg/clusterlv" \\
+	op monitor interval="20" timeout="40" \\
+	op start timeout="60" op stop timeout="60"
+group clusterfs dlm clvm o2cb cmirror vg filesys
+clone c-clusterfs clusterfs meta interleave="true"
+END
+	crm_configure_load update $tmp_conf
+
+	wait_for_resource "Waiting for O2CB" o2cb:0
+
+	status_long "Creating LVM Volume"
+	# TODO: requires -ff if physvol/vg exists; should prompt...
+	invoke pvcreate $OCFS2_DEVICE || error "Failed to create physical volume on $OCFS2_DEVICE"
+	local pvdev=$(pvdisplay $OCFS2_DEVICE | awk '/PV Name/ { print $3; }')
+	[ -z "$pvdev" ] && error "Can't determine PV Name on $OCFS2_DEVICE"
+	invoke vgcreate --clustered y clustervg $pvdev || error "Failed to create VG on $pvdev"
+	invoke lvcreate --name clusterlv --extents 100%FREE clustervg || error "Failed to create LV on clustervg"
+	local lvdev=$(lvdisplay clustervg | awk '/LV Name/ { print $3; }')
+	[ -z "$lvdev" ] && error "Unable to determine LV Name for clustervg"
+	status_done
+
+	status_long "Creating OCFS2 filesystem"
+	# TODO: want "-T vmstore", but this'll only fly on >2GB partition
+	# TODO: "Overwriting existing ocfs2 partition.
+	# Proceed (y/N): ... *sigh*
+	invoke mkfs.ocfs2 $lvdev || error "Failed to create OCFS2 filesystem on $lvdev"
+	status_done
+
+	# TODO: refactor, maybe
+	invoke mkdir -p /clusterfs || error "Can't create mountpoint /clusterfs"
+	invoke crm resource start vg || error "Can't start cluster filesystem clone"
+	wait_for_resource "Waiting for /clusterfs to be mounted" filesys:0
 }
 
 #------------------------------------------------------------------------------
 
-while getopts 'hi:p:qs:y' o; do
+while getopts 'hi:o:p:qs:y' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
@@ -449,9 +499,14 @@ done
 
 shift $(($OPTIND - 1))
 
-if [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
-	rcopenais status >/dev/null
-	rc=$?
+# vgfs stage requires running cluster, everything else requires inactive cluster,
+# except ssh (which doesn't care) and csync2_remote (which mustn't care, just in
+# case this breaks hae-join on another node).
+rcopenais status >/dev/null
+rc=$?
+if [ "$1" == "vgfs" ]; then
+	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
+elif [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
