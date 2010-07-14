@@ -143,6 +143,16 @@ init_cluster_local()
 	wait_for_cluster
 }
 
+confirm()
+{
+	$YES_TO_ALL && return 0
+
+	local tmp
+	read -e -p  "  $1 [y/N] " tmp
+	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1
+	return 0
+}
+
 prompt_for_overwrite()
 {
 	$YES_TO_ALL && return 0

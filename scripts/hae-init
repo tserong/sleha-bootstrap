@@ -25,6 +25,10 @@
 
 . /usr/lib/hae-functions
 
+declare SHARED_DEVICE
+declare SBD_DEVICE
+declare OCFS2_DEVICE
+
 usage()
 {
 	cat <<END
@@ -32,7 +36,9 @@ Usage: $0 [options] [stage]
 
 Options:
     -h          Display this usage information
-    -i          Default to IP address on interface 'if' instead of eth0
+    -i <if>     Default to IP address on interface 'if' instead of eth0
+    -p <dev>    Partition this shared storage device
+                (only valid for "storage" stage)
     -q          Be quiet (don't describe what's happening, just do it)
     -y          Answer "yes" to all prompts (use with care)
 
@@ -40,6 +46,7 @@ Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
+    storage     Partition shared storage
     cluster     Bring the cluster online
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -244,6 +251,113 @@ END
 	invoke csync2 -xv $COROSYNC_CONF
 }
 
+# Non-generic, i.e. not for use with every type of cluster you can imagine:
+# requires shared storage, and specifically configures one block device as
+# sbd partition + remainder for OCFS2 filesystem (created later).
+init_storage()
+{
+	local dev="$SHARED_DEVICE"
+	local partitions
+	local part
+	local -a devices
+	local -i dev_looks_sane=0
+
+	if $YES_TO_ALL || [ -n "$SHARED_DEVICE" ]; then
+		status 'Configuring shared storage'
+	else
+		status "
+Configure Shared Storage:
+  You will need to provide the path to a shared storage device,
+  for example a SAN volume or iSCSI target.  The device path must
+  be persistent and consistent across all nodes in the cluster,
+  so /dev/disk/by-id/* devices are a good choice.  This device
+  will be automatically paritioned into two pieces, 1MB for SBD
+  fencing, and the remainder for an OCFS2 filesystem.
+"
+	fi
+
+	while [ $dev_looks_sane -eq 0 ]; do
+		dev=$(prompt_for_string \
+			'Path to storage device (e.g. /dev/disk/by-id/...)' \
+			'\/.*' "$dev")
+		# This will be empty if -y was specified but -p wasn't
+		[ -z "$dev" ] && error "No value for shared storage device"
+
+		if [ ! -b "$dev" ]; then
+			$YES_TO_ALL && error "$dev is not a block device" \
+				|| echo "    That doesn't look like a block device" >&2
+		else
+			#
+			# Got something that looks like a block device, there
+			# are four possibilities now:
+			#
+			#  1) It's completely broken/inaccessible
+			#  2) No recognizable partition table
+			#  3) Empty partition table
+			#  4) Non-empty parition table
+			#
+			partitions=$(parted -s $dev print | awk '/^[[:space:]]*[0-9]+/ { print $1; }')
+			if [ -n "$partitions" ]; then
+				# Partitions exist
+				status "WARNING: Partitions exist on $dev!"
+				confirm 'Are you ABSOLUTELY SURE you want to overwrite?' \
+					&& dev_looks_sane=1 || dev=
+			else
+				# It's either broken, no partition table, or empty partition table
+				status "$dev appears to be empty"
+				confirm 'Are you sure you wish to use this device' \
+					&& dev_looks_sane=1 || dev=
+			fi
+		fi
+	done
+
+	if [ -n "$partitions" ]; then
+		confirm 'Really?' || exit
+		status_long "Erasing existing partitions..."
+		for part in $partitions; do
+			invoke parted -s $dev rm $part \
+				|| error "Failed to remove partition $part"
+		done
+		status_done
+	fi
+
+	status_long "Creating partitions..."
+	invoke parted -s $dev mklabel msdos || error "Failed to create partition table"
+
+	# TODO: this is a bit rough, the most accurate we can make parted is to
+	# speak in sectors, but then it complains when it doesn't line up nicely
+	# with a cylinder, so we're just going for megabytes for the moment.
+	# fdisk incidentally may bitch about partitions not lining up on sector
+	# boundaries.  Also, I don't know if this causes performance issues due
+	# to alignment (some RAIDs like partitions to be nicely lined up..)
+	# TODO: doesn't seem to create big enough partition on opensuse(?!?)
+	invoke parted -s $dev mkpart primary 0 1M || error "Failed to create first partition"
+	invoke parted -s $dev mkpart primary 1M 100% || error "Failed to create second partition"
+
+	status_done
+
+	# TODO: not sure if this is strictly necessary, and it's probably noisy,
+	# hence the error redirect (but maybe we *want* to see those messages...)
+	status_long "Probing for new partitions..."
+	invoke partprobe || error "Failed to probe new partitions"
+	# TODO: somehow the new partitions don't always appear immediately?  Need to verify/fix
+	invoke sleep 5
+	status_done
+
+	# TODO: THIS IS *WRONG* FOR MULTIPATH!
+	devices=( $(fdisk -l $dev | awk '/^\/dev/ { print $1; }') )
+
+	SBD_DEVICE=${devices[0]}
+	[ -z "$SBD_DEVICE" ] && error "Unable to determine device path for SBD partition"
+
+	OCFS2_DEVICE=${devices[1]}
+	[ -z "$OCFS2_DEVICE" ] && error "Unable to determine device path for OCFS2 partition"
+
+	status
+	status "Created $SBD_DEVICE for SBD partition"
+	status "Created $OCFS2_DEVICE for OCFS2 partition"
+}
+
 init_cluster()
 {
 	init_cluster_local
@@ -271,10 +385,11 @@ END
 
 #------------------------------------------------------------------------------
 
-while getopts 'hi:qy' o; do
+while getopts 'hi:p:qy' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
+	p) SHARED_DEVICE=$OPTARG;;
 	q) BE_QUIET=true;;
 	y) YES_TO_ALL=true;;
 	esac
@@ -290,7 +405,7 @@ if [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
 fi
 
 case $1 in
-ssh|csync2|csync2_remote|corosync|cluster)
+ssh|csync2|csync2_remote|corosync|storage|cluster)
 	log_start
 	# $2 == nasty hack to pick up IP arg to csync2_remote
 	init_$1 $2
@@ -300,6 +415,7 @@ ssh|csync2|csync2_remote|corosync|cluster)
 	init_ssh
 	init_csync2
 	init_corosync
+	init_storage
 	init_cluster
 	;;
 *)	echo -e "Invalid stage ($1)\n"
