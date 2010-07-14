@@ -336,15 +336,14 @@ Configure Shared Storage:
 
 	status_done
 
-	# TODO: not sure if this is strictly necessary, and it's probably noisy,
-	# hence the error redirect (but maybe we *want* to see those messages...)
+	# TODO: May not be strictly necessary, but...
 	status_long "Probing for new partitions..."
 	invoke partprobe || error "Failed to probe new partitions"
-	# TODO: somehow the new partitions don't always appear immediately?  Need to verify/fix
+	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
 	invoke sleep 5
 	status_done
 
-	# TODO: THIS IS *WRONG* FOR MULTIPATH!
+	# TODO: THIS IS *WRONG* FOR MULTIPATH! (but possibly nothing we can do about it)
 	devices=( $(fdisk -l $dev | awk '/^\/dev/ { print $1; }') )
 
 	SBD_DEVICE=${devices[0]}
