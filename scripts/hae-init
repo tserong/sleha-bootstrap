@@ -253,7 +253,6 @@ init_cluster()
 	[ "$node_count" -gt 1 ] && error "Joined existing cluster - will not reconfigure."
 
 	status "Loading initial configuration"
-	# TODO: should log injected config
 	local tmp_conf=/tmp/crm.$$
 	cat > $tmp_conf <<END
 property \$id="cib-bootstrap-options" \\
