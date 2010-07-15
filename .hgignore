@@ -5,3 +5,4 @@ syntax: glob
 *~
 *.o
 *.tmp
+hae-bootstrap*.tar.bz2
