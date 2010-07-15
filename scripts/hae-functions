@@ -91,13 +91,13 @@ start_service()
 status()
 {
 	$BE_QUIET && return
-	echo "$1"
+	echo "  $1"
 }
 
 status_long()
 {
 	$BE_QUIET && return
-	echo -n "$1..."
+	echo -n "  $1..."
 }
 
 status_done()
