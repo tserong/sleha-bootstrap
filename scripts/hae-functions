@@ -219,6 +219,18 @@ wait_for_resource()
 	status_done
 }
 
+# Call with $1 == message, $2 == resource
+# TODO: refactor this? (it's almost identical to wait_for_resource)
+wait_for_stop()
+{
+	status_long "$1"
+	while ! crm_resource --locate --resource $2 2>&1 | grep -q 'NOT running'; do
+		$BE_QUIET || echo -n '.'
+		sleep 1
+	done
+	status_done
+}
+
 random_256()
 {
 	local -i n=$RANDOM

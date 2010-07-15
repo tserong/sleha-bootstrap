@@ -428,12 +428,13 @@ END
 	fi
 }
 
+# Non-generic, i.e. not for use with every type of cluster you can imagine:
+# creates specific cluster config (TODO: would be nice to template this in
+# future somehow)
 init_vgfs()
 {
 	[ -b "$OCFS2_DEVICE" ] || error "OCFS2 device $OCFS2_DEVICE does not exist"
 
-	# TODO: this won't work if the vgfs is run by itself,
-	# and all this stuff already exists in the CIB.
 	# TODO: confiugrable mountpoint and vg name
 	local tmp_conf=/tmp/crm.$$
 	cat > $tmp_conf <<END
@@ -458,10 +459,23 @@ END
 	crm_configure_load update $tmp_conf
 
 	wait_for_resource "Waiting for O2CB" o2cb:0
+	wait_for_stop "Making sure VG is not active" vg:0
+
+	if pvdisplay $OCFS2_DEVICE >/dev/null 2>&1; then
+		if ! confirm "Existing Physical Volume found on $OCFS2_DEVICE - destroy?"; then
+			invoke crm resource stop c-clusterfs
+			wait_for_stop "Waiting for resource to stop" c-clusterfs
+			invoke crm configure delete \
+				dlm clvm cmirror o2cb vg filesys \
+				clusterfs c-clusterfs
+			return
+		fi
+	fi
 
 	status_long "Creating LVM Volume"
-	# TODO: requires -ff if physvol/vg exists; should prompt...
-	invoke pvcreate $OCFS2_DEVICE || error "Failed to create physical volume on $OCFS2_DEVICE"
+	# -ff forces create if something already exists
+	# (dangerous, but you asked for it...)
+	invoke pvcreate -ff -y $OCFS2_DEVICE || error "Failed to create physical volume on $OCFS2_DEVICE"
 	local pvdev=$(pvdisplay $OCFS2_DEVICE | awk '/PV Name/ { print $3; }')
 	[ -z "$pvdev" ] && error "Can't determine PV Name on $OCFS2_DEVICE"
 	invoke vgcreate --clustered y clustervg $pvdev || error "Failed to create VG on $pvdev"
@@ -472,14 +486,16 @@ END
 
 	status_long "Creating OCFS2 filesystem"
 	# TODO: want "-T vmstore", but this'll only fly on >2GB partition
-	# TODO: "Overwriting existing ocfs2 partition.
-	# Proceed (y/N): ... *sigh*
-	invoke mkfs.ocfs2 $lvdev || error "Failed to create OCFS2 filesystem on $lvdev"
+	# Note: using undocumented '-x' switch to avoid prompting if overwriting
+	# existing partition.  For the commit that introduced this, see:
+	# http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
+	invoke mkfs.ocfs2 -x $lvdev || error "Failed to create OCFS2 filesystem on $lvdev"
 	status_done
 
 	# TODO: refactor, maybe
 	invoke mkdir -p /clusterfs || error "Can't create mountpoint /clusterfs"
-	invoke crm resource start vg || error "Can't start cluster filesystem clone"
+	invoke crm resource meta vg delete target-role \
+		|| error "Can't start cluster filesystem clone"
 	wait_for_resource "Waiting for /clusterfs to be mounted" filesys:0
 }
 
