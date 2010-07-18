@@ -72,8 +72,8 @@ init_ssh()
 	invoke mkdir -m 700 -p /root/.ssh
 
 	if [ -f /root/.ssh/id_rsa ]; then
-		prompt_for_overwrite \
-			'/root/.ssh/id_rsa already exists' || return
+		confirm \
+			'/root/.ssh/id_rsa already exists - overwrite?' || return
 		invoke rm -f /root/.ssh/id_rsa
 	fi
 
@@ -91,7 +91,7 @@ init_csync2()
 	if [ -f "$CSYNC2_KEY" ] || \
 		grep -v -q -s '^[[:space:]]*\(#.*\)*$' $CSYNC2_CFG
 	then
-		prompt_for_overwrite 'csync2 is already configured' || return
+		confirm 'csync2 is already configured - overwrite?' || return
 	fi
 
 	invoke rm -f $CSYNC2_KEY
@@ -180,8 +180,8 @@ Configure Corosync:
 	fi
 
 	if [ -f "$COROSYNC_CONF" ]; then
-		prompt_for_overwrite \
-			"$COROSYNC_CONF already exists" || return
+		confirm \
+			"$COROSYNC_CONF already exists - overwrite?" || return
 	fi
 
 	local bindnetaddr=$(prompt_for_string \

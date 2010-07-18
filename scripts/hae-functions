@@ -1,4 +1,5 @@
-#!/bin/bash
+# /usr/lib/hae-functions
+# Supporting functions for /usr/sbin/hae-{init,join}
 #
 # Copyright (c) 2010 Novell Inc., Tim Serong <tserong@novell.com>
 #                        All Rights Reserved.
@@ -150,16 +151,6 @@ confirm()
 
 	local tmp
 	read -e -p  "  $1 [y/N] " tmp
-	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1
-	return 0
-}
-
-prompt_for_overwrite()
-{
-	$YES_TO_ALL && return 0
-
-	local tmp
-	read -e -p "  $1 - overwrite? [y/N] " tmp
 	[ "$tmp" != "y" -a "$tmp" != "Y" ] && return 1
 	return 0
 }
