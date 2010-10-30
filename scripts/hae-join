@@ -34,6 +34,7 @@ Usage: $0 [options] [stage]
 
 Options:
     -c          IP address or hostname of existing cluster node
+    -i <if>     Default to IP address on interface 'if' instead of eth0
     -h          Display this usage information
     -q          Be quiet (don't describe what's happening, just do it)
     -y          Answer "yes" to all prompts (use with care)
@@ -73,10 +74,20 @@ join_csync2()
 {
 	[ -n "$SEED_HOST" ] || error "No existing IP/hostname specified (use -c option)"
 
+	etc_hosts_add_me
+	local hosts_line=$(etc_hosts_get_me)
+	[ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
+
 	status "Configuring csync2"
 
-	invoke ssh root@$SEED_HOST hae-init csync2_remote $(hostname) \
+	invoke ssh root@$SEED_HOST hae-init csync2_remote $(hostname) "\"$hosts_line\"" \
 		|| error "Can't invoke hae-init csync2_remote on $SEED_HOST"
+
+	# This is necessary for hostname resolution to work (*sigh*)
+	local tmp_conf=/etc/hosts.$$
+	invoke scp root@$SEED_HOST:/etc/hosts $tmp_conf \
+		|| error "Can't retrieve /etc/hosts from $SEED_HOST"
+	install_tmp $tmp_conf /etc/hosts
 
 	invoke scp root@$SEED_HOST:'/etc/csync2/{csync2.cfg,key_hagroup}' \
 		/etc/csync2 \
@@ -118,9 +129,10 @@ join_cluster()
 
 #------------------------------------------------------------------------------
 
-while getopts 'c:hqy' o; do
+while getopts 'c:i:hqy' o; do
 	case $o in
 	c) SEED_HOST=$OPTARG;;
+	i) NET_IF=$OPTARG;;
 	h) usage;;
 	q) BE_QUIET=true;;
 	y) YES_TO_ALL=true;;

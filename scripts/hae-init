@@ -86,6 +86,10 @@ init_ssh()
 
 init_csync2()
 {
+	# Need hostname resolution to work
+	etc_hosts_add_me
+	[ -n "$(etc_hosts_get_me)" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
+
 	status "Configuring csync2"
 
 	if [ -f "$CSYNC2_KEY" ] || \
@@ -113,6 +117,7 @@ group ha_group
 	include /etc/ctdb/nodes;
 	include /etc/drbd.d;
 	include /etc/ha.d/ldirectord.cf;
+	include /etc/hosts;
 	include /etc/lvm/lvm.conf;
 	include /etc/multipath.conf;
 	include /etc/samba/smb.conf;
@@ -141,13 +146,22 @@ END
 # So we have this function which is called by hae-join to add the new
 # remote node to csync2 config on some existing node.  It is intentionally
 # not documented in hae-init's user-visible usage information.
+# Note that this function also adds the remote node to /etc/hosts (we
+# need local name resolution to work).
 init_csync2_remote()
 {
 	local newhost=$1
+	local newline="$2"
 	local thishost=$(hostname)
 	[ -n "$newhost" ] || error "Hostname not specified"
 
 	BE_QUIET=true
+
+	if [ -n "$newline" ]; then
+		etc_hosts_add_one $newhost "$newline"
+	else
+		log ": Not updating /etc/hosts - remote host line not specified"
+	fi
 
 	# If host doesn't already exist in csync2 config, add it
 	if ! egrep -q -s \
@@ -161,7 +175,7 @@ init_csync2_remote()
 		install_tmp $tmp_conf $CSYNC2_CFG
 		invoke csync2 -c $CSYNC2_CFG
 	else
-		log ": Nothing to do - remote host $newhost already exists"
+		log ": Not updating $CSYNC2_CFG - remote host $newhost already exists"
 	fi
 }
 
@@ -517,23 +531,25 @@ done
 
 shift $(($OPTIND - 1))
 
+stage=$1 ; shift
+
 # vgfs stage requires running cluster, everything else requires inactive cluster,
 # except ssh (which doesn't care) and csync2_remote (which mustn't care, just in
 # case this breaks hae-join on another node).
 rcopenais status >/dev/null
 rc=$?
-if [ "$1" == "vgfs" ]; then
+if [ "$stage" == "vgfs" ]; then
 	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
-elif [ "$1" != "ssh" -a "$1" != "csync2_remote" ]; then
+elif [ "$stage" != "ssh" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
-case $1 in
+case $stage in
 ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	log_start
 	# $2 == nasty hack to pick up IP arg to csync2_remote
-	init_$1 $2
+	init_$stage "$@"
 	;;
 "")
 	log_start

@@ -24,7 +24,7 @@
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
 
-declare -r INVOCATION="$0 $*"
+declare -r INVOCATION=$(printf '%q ' "$0" "$@")
 declare -r LOG_FILE=/var/log/hae-bootstrap.log
 declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
 declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
@@ -235,6 +235,52 @@ append()
 {
 	log "+ cat $1 >> $2"
 	cat $1 >> $2
+}
+
+# Call with $1 == hostname, $2 == new line to add to /etc/hosts
+# if there's no entry already for hostname.  Make sure you quote
+# the new line so it comes in as one arg!
+etc_hosts_add_one()
+{
+	local newhost=$1
+	local newline=$2
+
+	# If host doesn't already exist in /etc/hosts, add it
+	if ! egrep -q -s \
+		"^[[:digit:]]+.*\\b${newhost}\\b" \
+		/etc/hosts
+	then
+		local tmp_conf=/etc/hosts.$$
+		cp /etc/hosts $tmp_conf
+		echo "$newline" >> $tmp_conf
+		install_tmp $tmp_conf /etc/hosts
+	else
+		log ": Not updating /etc/hosts - remote host $newhost already exists"
+	fi
+}
+
+# Returns success if there's an entry for the current node
+# (regardless of whether it's mapped to localhost or a real IP)
+etc_hosts_has_me()
+{
+	egrep -q "^[[:digit:]]+.*\\b$(hostname)\\b" /etc/hosts
+}
+
+# Prints the line from /etc/hosts for the current node (unless
+# it maps to localhost), in which case you get nothing)
+etc_hosts_get_me()
+{
+	egrep "^[[:digit:]]+.*\\b$(hostname)\\b" /etc/hosts | grep -v '^127'
+}
+
+# Adds current node to /etc/hosts if it doesn't already exist
+etc_hosts_add_me()
+{
+	etc_hosts_has_me && return
+
+	status "Adding entry for $(hostname) to /etc/hosts"
+	[ -n "$IP_ADDRESS" ] || error "Unable to determine this node's IP address"
+	etc_hosts_add_one $(hostname) "$IP_ADDRESS $(hostname)"
 }
 
 _onexit()
