@@ -28,6 +28,7 @@
 declare SHARED_DEVICE
 declare SBD_DEVICE
 declare OCFS2_DEVICE
+declare TEMPLATE
 
 usage()
 {
@@ -41,26 +42,35 @@ Options:
                 destructive, especially during the "storage" stage)
 
     -i <if>     Default to IP address on interface 'if' instead of eth0
+    -s <dev>    Block device to use for SBD fencing
 
-    -p <dev>    Partition this shared storage device (only valid for
+    -t <name>   Optionally configure cluster with template 'name'
+                (currently only "ocfs2" is valid here)
+
+Options for ocfs2 template:
+    -p <dev>    Partition this shared storage device (only used in
                 "storage" stage)
-    -o <dev>    Block device to use for OCFS2 (only valid for "vgfs" stage)
-    -s <dev>    Block device to use for SBD (only valid for "sbd" stage)
+    -o <dev>    Block device to use for OCFS2 (only used in "vgfs" stage)
 
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
     corosync    Configure corosync
-    storage     Partition shared storage
+    storage     Partition shared storage (ocfs2 template only)
     sbd         Configure SBD (requires -s <dev>)
     cluster     Bring the cluster online
-    vgfs        Create volume group and filesystem (requires -o <dev>)
+    vgfs        Create volume group and filesystem (ocfs2 template only,
+                requires -o <dev>)
 
 Note:
   - If stage is not specified, the script will run through each stage
-    in sequence.
-  - In normal operation, -s and -o will be ignored, unless both are
-    specified, in which case the 'storage' stage will be skipped.
+    in sequence, with prompts for required information.
+  - If using the ocfs2 template, the storage stage will partition a block
+    device into two pieces, one for SBD, the remainder for OCFS2.  This is
+    good for testing and demonstration, but not ideal for production.
+    To use storage you have already configured, pass -s and -o to specify
+    the block devices for SBD and OCFS2, and the automatic partitioning
+    will be skipped.
 END
 	exit 0
 }
@@ -517,7 +527,7 @@ END
 
 #------------------------------------------------------------------------------
 
-while getopts 'hi:o:p:qs:y' o; do
+while getopts 'hi:o:p:qs:t:y' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
@@ -525,6 +535,7 @@ while getopts 'hi:o:p:qs:y' o; do
 	p) SHARED_DEVICE=$OPTARG;;
 	q) BE_QUIET=true;;
 	s) SBD_DEVICE=$OPTARG;;
+	t) TEMPLATE=$OPTARG;;
 	y) YES_TO_ALL=true;;
 	esac
 done
@@ -545,6 +556,12 @@ elif [ "$stage" != "ssh" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
+case $TEMPLATE in
+ocfs2)	;;
+"")	;;
+*)	error "Invalid template ($TEMPLATE)"
+esac
+
 case $stage in
 ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	log_start
@@ -556,10 +573,12 @@ ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	init_ssh
 	init_csync2
 	init_corosync
-	[ -n "$SBD_DEVICE" -a -n "$OCFS2_DEVICE" ] || init_storage
+	if [ "$TEMPLATE" == "ocfs2" ]; then
+		[ -n "$SBD_DEVICE" -a -n "$OCFS2_DEVICE" ] || init_storage
+	fi
 	init_sbd
 	init_cluster
-	init_vgfs
+	[ "$TEMPLATE" == "ocfs2" ] && init_vgfs
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage
