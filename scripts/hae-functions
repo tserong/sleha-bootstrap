@@ -148,6 +148,9 @@ init_cluster_local()
 		|| status "    https://SERVER:7630/"
 	status "  Log in with username 'hacluster'${pass_msg}"
 
+	[ -n "$pass_msg" ] && \
+		warn "You should change the hacluster password to something more secure!"
+
 	start_service openais
 	wait_for_cluster
 }
