@@ -190,5 +190,5 @@ Join This Node to Cluster:
 	usage
 esac
 
-status "Done"
+status "Done (log saved to $LOG_FILE)"
 exit 0

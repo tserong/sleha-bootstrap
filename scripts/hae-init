@@ -643,5 +643,5 @@ ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	usage
 esac
 
-status "Done"
+status "Done (log saved to $LOG_FILE)"
 exit 0
