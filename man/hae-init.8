@@ -1,0 +1,136 @@
+.TH HAE-INIT 8 "2011-05-24"
+.SH NAME
+hae-init \- Initialize the first node in a new HA cluster.
+.SH SYNOPSIS
+.B hae-init
+[\fB-hqy\fR]
+[\fB-i\fR \fIif\fR]
+[\fB-s\fR \fIdev\fR]
+[\fB-t\fR \fIname\fR]
+[\fB-p\fR \fIdev\fR]
+[\fB-o\fR \fIdev\fR]
+[\fIstage\fR]
+.SH DESCRIPTION
+.B hae-init
+automates initial configuration of the first node in a SUSE
+Linux Enterprise High Availability cluster.  If invoked
+with no arguments, it will:
+.IP 1.
+Generate SSH keys for passwordless SSH between cluster nodes.
+.IP 2.
+Configure csync2, for synchronization of configuration files.
+.IP 3.
+Configure the Corosync cluster engine.
+.IP 4.
+Optionally, configure SBD fencing.
+.IP 5.
+Start the cluster.
+.IP 6.
+Start Hawk, so you can monitor the cluster and perform further
+configuration in your web browser.
+.PP
+During the above process you will be prompted for some basic
+configuration information.  This information can alternately
+be specified via command line arguments.
+.PP
+Once you have one node running, you can add other nodes to
+the cluster by running
+.B hae-join
+on each new node.
+.SH OPTIONS
+.TP
+.B -h
+Display help message.
+.TP
+.B -q
+Be quiet (don't describe what's happening, just do it).
+.TP
+.B -y
+Answer "yes" to all prompts (use with caution, this is
+destructive).
+.TP
+.BI "-i " interface
+Default to IP address on
+.I interface
+instead of eth0 when configuring Corosync.
+.TP
+.BI "-s " device
+Use
+.I device
+for SBD fencing.  The device path must be persistent and
+consistent across all nodes in the cluster, so
+.I /dev/disk/by-id/*
+devices are a good choice.
+.TP
+.BI "-t " name
+Perform additional cluster configuration based on the
+named template.  Currently "ocfs2" is the only valid
+template.  This will partition some shared storage into
+two pieces, 1 megabyte for SBD, the remainder for OCFS2.
+This is good for testing and demonstration, but not ideal
+for production.  To use storage you have already
+configured, pass
+.B -s
+and
+.B -o
+to specify the block devices for SBD and OCFS2, and the
+automatic partitioning will be skipped.
+.TP
+.BI "-p " device
+When using the ocfs2 template, partition the specified
+block device as described above.
+.TP
+.BI "-o " device
+When using the ocfs2 template, use the specified block
+device for the OCFS2 filesystem (this is incompatible
+with the
+.B -p
+option).
+.TP
+.I stage
+Invoke only one stage of cluster initialization.  The
+stage can be any one of
+.I ssh,
+.I csync2,
+.I corosync,
+.I storage
+(ocfs2 template only),
+.I sbd,
+.I cluster
+or
+.I vgfs
+(ocfs2 template only).
+If unspecified, each stage will be executed in sequence.
+.SH FILES
+In addition to the Pacemaker CIB, the following files are
+created or modified by \fBhae-init\fR:
+.PP
+.I /root/.ssh/id_rsa
+.I /root/.ssh/id_rsa.pub
+.I /root/.ssh/authorized_keys
+.RS
+Default ssh key and authorized_keys file for root user.
+.RE
+.I /etc/csync2/csync2.cfg
+.I /etc/csync2/key_hagroup
+.RS
+csync2 configuration files.
+.RE
+.I /etc/corosync/corosync.conf
+.RS
+corosync configuration file.
+.RE
+.I /etc/sysconfig/sbd
+.RS
+SBD fencing configuration.
+.RE
+.PP
+.SH DIAGNOSTICS
+A complete log of all actions is written to
+.I /var/log/hae-bootstrap.log
+.SH "SEE ALSO"
+.BR csync2 (1),
+.BR corosync (8),
+.BR hae-join (8)
+.SH AUTHOR
+Tim Serong <tserong@novell.com>
