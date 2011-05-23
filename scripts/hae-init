@@ -394,12 +394,51 @@ Configure Shared Storage:
 
 init_sbd()
 {
+	local dev
+	local -i dev_looks_sane=0
+
+	if [ -z "$SBD_DEVICE" ]; then
+		# SBD device not set up by init_storage (ocfs2 template) and
+		# also not passed in as command line argument - prompt user
+		if $YES_TO_ALL; then
+			warn "Not configuring SBD - STONITH will be disabled."
+			return
+		fi
+		status "
+Configure SBD:
+  If you have shared storage, for example a SAN or iSCSI target,
+  you can use it avoid split-brain scenarios by configuring SBD.
+  This requires a 1 MB partition, accessible to all nodes in the
+  cluster.  The device path must be persistent and consistent
+  across all nodes in the cluster, so /dev/disk/by-id/* devices
+  are a good choice.  Note that all data on the partition you
+  specify here will be destroyed.
+"
+		if ! confirm "Do you wish to use SBD?"; then
+			warn "Not configuring SBD - STONITH will be disabled."
+			return
+		fi
+		while [ $dev_looks_sane -eq 0 ]; do
+			dev=$(prompt_for_string \
+				'Path to storage device (e.g. /dev/disk/by-id/...)' \
+				'\/.*' "$dev")
+			if [ ! -b "$dev" ]; then
+				echo "    That doesn't look like a block device" >&2
+			else
+				status "All data on $dev will be destroyed"
+				confirm 'Are you sure you wish to use this device' \
+					&& dev_looks_sane=1 || dev=
+			fi
+		done
+		SBD_DEVICE="$dev"
+	fi
+
 	[ -b "$SBD_DEVICE" ] || error "SBD device $SBD_DEVICE does not exist"
 
 	# TODO: need to ensure watchdog is available
 	# (actually, should work if watchdog unavailable, it'll just whine in the logs...)
 	# TODO: what about timeouts for multipath devices?
-	status_long 'Configuring SBD...'
+	status_long 'Initializing SBD...'
 	invoke sbd -d $SBD_DEVICE create || error "Failed to initialize SBD device"
 	status_done
 
