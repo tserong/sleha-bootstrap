@@ -97,11 +97,11 @@ init_ssh()
 
 init_csync2()
 {
-	# Need hostname resolution to work
-	etc_hosts_add_me
-	[ -n "$(etc_hosts_get_me)" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
-
 	status "Configuring csync2"
+
+	# Not automatically updating /etc/hosts - risky in the general case.
+	#etc_hosts_add_me
+	#[ -n "$(etc_hosts_get_me)" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
 
 	if [ -f "$CSYNC2_KEY" ] || \
 		grep -v -q -s '^[[:space:]]*\(#.*\)*$' $CSYNC2_CFG
@@ -128,7 +128,6 @@ group ha_group
 	include /etc/ctdb/nodes;
 	include /etc/drbd.d;
 	include /etc/ha.d/ldirectord.cf;
-	include /etc/hosts;
 	include /etc/lvm/lvm.conf;
 	include /etc/multipath.conf;
 	include /etc/samba/smb.conf;
@@ -157,22 +156,21 @@ END
 # So we have this function which is called by hae-join to add the new
 # remote node to csync2 config on some existing node.  It is intentionally
 # not documented in hae-init's user-visible usage information.
-# Note that this function also adds the remote node to /etc/hosts (we
-# need local name resolution to work).
 init_csync2_remote()
 {
 	local newhost=$1
-	local newline="$2"
+	#local newline="$2"
 	local thishost=$(hostname)
 	[ -n "$newhost" ] || error "Hostname not specified"
 
 	BE_QUIET=true
 
-	if [ -n "$newline" ]; then
-		etc_hosts_add_one $newhost "$newline"
-	else
-		log ": Not updating /etc/hosts - remote host line not specified"
-	fi
+	# Not automatically updating /etc/hosts - risky in the general case.
+	#if [ -n "$newline" ]; then
+	#	etc_hosts_add_one $newhost "$newline"
+	#else
+	#	log ": Not updating /etc/hosts - remote host line not specified"
+	#fi
 
 	# If host doesn't already exist in csync2 config, add it
 	if ! egrep -q -s \
@@ -609,6 +607,13 @@ elif [ "$stage" != "ssh" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
+# Need hostname resolution to work (but don't block csync2_remote)
+if ! my_hostname_resolves && [ "$stage" != "csync2_remote" ]; then
+	warn "Hostname '$(hostname)' is unresolvable - csync2 won't work."
+	warn "You should add an entry to /etc/hosts or configure DNS."
+	confirm 'Do you want to continue anyway?' || exit
+fi
+
 case $TEMPLATE in
 ocfs2)	;;
 "")	;;
@@ -618,7 +623,8 @@ esac
 case $stage in
 ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	log_start
-	# $2 == nasty hack to pick up IP arg to csync2_remote
+	# $2 == nasty hack to pick up IP arg to csync2_remote (not strictly
+	# necessary currently, as we're not auto-updating /etc/hosts)
 	init_$stage "$@"
 	;;
 "")

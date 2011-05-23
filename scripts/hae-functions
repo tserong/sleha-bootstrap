@@ -238,6 +238,11 @@ append()
 	cat $1 >> $2
 }
 
+my_hostname_resolves()
+{
+	perl -e "gethostbyname('$(hostname)') && exit 0 || exit 1;"
+}
+
 # Call with $1 == hostname, $2 == new line to add to /etc/hosts
 # if there's no entry already for hostname.  Make sure you quote
 # the new line so it comes in as one arg!
