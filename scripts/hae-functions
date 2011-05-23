@@ -90,6 +90,12 @@ start_service()
 	fi
 }
 
+# Determines if a service is chkconfig'd on (not if it's actually running)
+service_is_on()
+{
+	chkconfig $1 | egrep "$1[[:space:]]+on"
+}
+
 status()
 {
 	$BE_QUIET && return
@@ -298,6 +304,26 @@ _onexit()
 	# don't double-trap on normal exit
 	trap - 0
 	exit $rc
+}
+
+check_prereqs()
+{
+	local -i warned=0
+
+	if ! my_hostname_resolves ; then
+		warn "Hostname '$(hostname)' is unresolvable - csync2 won't work."
+		warn "You should add an entry to /etc/hosts or configure DNS."
+		warned=1
+	fi
+
+	if ! service_is_on ntp ; then
+		warn "NTP is not configured to start at system boot."
+		warned=1
+	fi
+
+	if [ $warned -ne 0 ]; then
+		confirm 'Do you want to continue anyway?' || exit
+	fi
 }
 
 log_start()

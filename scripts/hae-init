@@ -607,11 +607,9 @@ elif [ "$stage" != "ssh" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
-# Need hostname resolution to work (but don't block csync2_remote)
-if ! my_hostname_resolves && [ "$stage" != "csync2_remote" ]; then
-	warn "Hostname '$(hostname)' is unresolvable - csync2 won't work."
-	warn "You should add an entry to /etc/hosts or configure DNS."
-	confirm 'Do you want to continue anyway?' || exit
+# Need hostname resolution to work, want NTP (but don't block csync2_remote)
+if [ "$stage" != "csync2_remote" ]; then
+	check_prereqs
 fi
 
 case $TEMPLATE in

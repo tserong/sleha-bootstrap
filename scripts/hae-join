@@ -154,12 +154,8 @@ if [ "$1" != "ssh" ]; then
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
-# Need hostname resolution to work
-if ! my_hostname_resolves ; then
-	warn "Hostname '$(hostname)' is unresolvable - csync2 won't work."
-	warn "You should add an entry to /etc/hosts or configure DNS."
-	confirm 'Do you want to continue anyway?' || return
-fi
+# Need hostname resolution to work, want NTP
+check_prereqs
 
 case $1 in
 ssh|csync2|cluster)
