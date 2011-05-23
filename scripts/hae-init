@@ -402,7 +402,7 @@ init_sbd()
 		# SBD device not set up by init_storage (ocfs2 template) and
 		# also not passed in as command line argument - prompt user
 		if $YES_TO_ALL; then
-			warn "Not configuring SBD - STONITH will be disabled."
+			warn "Not configuring SBD ($SYSCONFIG_SBD left untouched)."
 			return
 		fi
 		status "
@@ -415,8 +415,21 @@ Configure SBD:
   are a good choice.  Note that all data on the partition you
   specify here will be destroyed.
 "
+
+		if [ -f "$SYSCONFIG_SBD" ] && grep -q '^SBD_DEVICE=' $SYSCONFIG_SBD; then
+			confirm \
+				"SBD is already configured - overwrite?" || return
+		fi
+
 		if ! confirm "Do you wish to use SBD?"; then
 			warn "Not configuring SBD - STONITH will be disabled."
+			# Comment out SBD devices if present
+			if [ -f "$SYSCONFIG_SBD" ]; then
+				local tmp_conf=$SYSCONFIG_SBD.$$
+				sed -e 's/^\([^#].*\)$/#\1/g' $SYSCONFIG_SBD > $tmp_conf
+				install_tmp $tmp_conf $SYSCONFIG_SBD
+				invoke csync2 -xv $SYSCONFIG_SBD
+			fi
 			return
 		fi
 		while [ $dev_looks_sane -eq 0 ]; do
