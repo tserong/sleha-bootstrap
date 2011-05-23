@@ -1,6 +1,7 @@
 #
-# Copyright (c) 2010 Novell Inc., Tim Serong <tserong@novell.com>
-#                        All Rights Reserved.
+# Copyright (c) 2010-2011 Novell Inc. All Rights Reserved.
+#
+# Author: Tim Serong <tserong@novell.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
