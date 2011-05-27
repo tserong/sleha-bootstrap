@@ -24,7 +24,7 @@
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
 
-. /usr/lib/hae-functions
+. /usr/lib/sleha-functions
 
 declare SHARED_DEVICE
 declare SBD_DEVICE
@@ -153,9 +153,9 @@ END
 # That way, adding a new node would just mean adding a single new file
 # to that directory.  Unfortunately, the 'config' statement only allows
 # inclusion of specific individual files, not multiple files via wildcard.
-# So we have this function which is called by hae-join to add the new
+# So we have this function which is called by sleha-join to add the new
 # remote node to csync2 config on some existing node.  It is intentionally
-# not documented in hae-init's user-visible usage information.
+# not documented in sleha-init's user-visible usage information.
 init_csync2_remote()
 {
 	local newhost=$1
@@ -233,7 +233,7 @@ Configure Corosync:
 			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
 			/etc/corosync/corosync.conf.example > $tmp_conf
 	else
-		# Fallback to known sane config (defaults from SLE 11 SP1 HAE
+		# Fallback to known sane config (defaults from SLE HA 11 SP1
 		# corosync.conf.example.patch)
 		cat > $tmp_conf <<END
 # Please read the corosync.conf.5 manual page
@@ -597,7 +597,7 @@ stage=$1 ; shift
 
 # vgfs stage requires running cluster, everything else requires inactive cluster,
 # except ssh (which doesn't care) and csync2_remote (which mustn't care, just in
-# case this breaks hae-join on another node).
+# case this breaks sleha-join on another node).
 rcopenais status >/dev/null
 rc=$?
 if [ "$stage" == "vgfs" ]; then

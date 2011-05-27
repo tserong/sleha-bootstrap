@@ -24,7 +24,7 @@
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
 
-. /usr/lib/hae-functions
+. /usr/lib/sleha-functions
 
 declare SEED_HOST
 
@@ -83,9 +83,9 @@ join_csync2()
 	#[ -n "$hosts_line" ] || error "No valid entry for $(hostname) in /etc/hosts - csync2 can't work"
 
 	# If we *were* updating /etc/hosts, the next line would have "\"$hosts_line\"" as
-	# the last arg (but this requires re-enabling this functionality in hae-init)
-	invoke ssh root@$SEED_HOST hae-init csync2_remote $(hostname) \
-		|| error "Can't invoke hae-init csync2_remote on $SEED_HOST"
+	# the last arg (but this requires re-enabling this functionality in sleha-init)
+	invoke ssh root@$SEED_HOST sleha-init csync2_remote $(hostname) \
+		|| error "Can't invoke sleha-init csync2_remote on $SEED_HOST"
 
 	# This is necessary if syncing /etc/hosts (to ensure everyone's got the
 	# same list of hosts)

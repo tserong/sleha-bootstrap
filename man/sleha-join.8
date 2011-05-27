@@ -1,14 +1,14 @@
-.TH HAE-JOIN 8 "2011-05-24"
+.TH SLEHA-JOIN 8 "2011-05-24"
 .SH NAME
-hae-join \- Join a new node to an existing HA cluster.
+sleha-join \- Join a new node to an existing HA cluster.
 .SH SYNOPSIS
-.B hae-join
+.B sleha-join
 [\fB-hqy\fR]
 [\fB-c\fR \fIhost\fR]
 [\fB-i\fR \fIif\fR]
 [\fIstage\fR]
 .SH DESCRIPTION
-.B hae-join
+.B sleha-join
 automates the addition of new nodes to a SUSE Linux
 Enterprise High Availability cluster.  If invoked with
 no arguments, it will:
@@ -55,7 +55,7 @@ or
 in sequence.
 .SH FILES
 In addition to the Pacemaker CIB, the following files are
-created or modified by \fBhae-join\fR:
+created or modified by \fBsleha-join\fR:
 .PP
 .I /root/.ssh/id_rsa
 .I /root/.ssh/id_rsa.pub
@@ -79,10 +79,10 @@ SBD fencing configuration.
 .PP
 .SH DIAGNOSTICS
 A complete log of all actions is written to
-.I /var/log/hae-bootstrap.log
+.I /var/log/sleha-bootstrap.log
 .SH "SEE ALSO"
 .BR csync2 (1),
 .BR corosync (8),
-.BR hae-init (8)
+.BR sleha-init (8)
 .SH AUTHOR
 Tim Serong <tserong@novell.com>

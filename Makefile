@@ -28,5 +28,5 @@ dummy:
 
 # Make a tar.bz2 of everything
 archive:
-	rm -f hae-bootstrap.tar.bz2
-	hg archive -t tbz2 hae-bootstrap.tar.bz2
+	rm -f sleha-bootstrap.tar.bz2
+	hg archive -t tbz2 sleha-bootstrap.tar.bz2

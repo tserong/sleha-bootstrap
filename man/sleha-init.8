@@ -1,8 +1,8 @@
-.TH HAE-INIT 8 "2011-05-24"
+.TH SLEHA-INIT 8 "2011-05-24"
 .SH NAME
-hae-init \- Initialize the first node in a new HA cluster.
+sleha-init \- Initialize the first node in a new HA cluster.
 .SH SYNOPSIS
-.B hae-init
+.B sleha-init
 [\fB-hqy\fR]
 [\fB-i\fR \fIif\fR]
 [\fB-s\fR \fIdev\fR]
@@ -11,7 +11,7 @@ hae-init \- Initialize the first node in a new HA cluster.
 [\fB-o\fR \fIdev\fR]
 [\fIstage\fR]
 .SH DESCRIPTION
-.B hae-init
+.B sleha-init
 automates initial configuration of the first node in a SUSE
 Linux Enterprise High Availability cluster.  If invoked
 with no arguments, it will:
@@ -35,7 +35,7 @@ be specified via command line arguments.
 .PP
 Once you have one node running, you can add other nodes to
 the cluster by running
-.B hae-join
+.B sleha-join
 on each new node.
 .SH OPTIONS
 .TP
@@ -103,7 +103,7 @@ or
 If unspecified, each stage will be executed in sequence.
 .SH FILES
 In addition to the Pacemaker CIB, the following files are
-created or modified by \fBhae-init\fR:
+created or modified by \fBsleha-init\fR:
 .PP
 .I /root/.ssh/id_rsa
 .I /root/.ssh/id_rsa.pub
@@ -127,10 +127,10 @@ SBD fencing configuration.
 .PP
 .SH DIAGNOSTICS
 A complete log of all actions is written to
-.I /var/log/hae-bootstrap.log
+.I /var/log/sleha-bootstrap.log
 .SH "SEE ALSO"
 .BR csync2 (1),
 .BR corosync (8),
-.BR hae-join (8)
+.BR sleha-join (8)
 .SH AUTHOR
 Tim Serong <tserong@novell.com>
