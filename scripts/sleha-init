@@ -371,11 +371,7 @@ Configure Shared Storage:
 	status_done
 
 	# TODO: May not be strictly necessary, but...
-	status_long "Probing for new partitions..."
-	invoke partprobe || error "Failed to probe new partitions"
-	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
-	invoke sleep 5
-	status_done
+	probe_partitions
 
 	# TODO: THIS IS *WRONG* FOR MULTIPATH! (but possibly nothing we can do about it)
 	devices=( $(fdisk -l $dev | awk '/^\/dev/ { print $1; }') )

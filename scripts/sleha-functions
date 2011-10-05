@@ -114,6 +114,15 @@ status_done()
 	echo "done"
 }
 
+probe_partitions()
+{
+	status_long "Probing for new partitions..."
+	invoke partprobe || error "Failed to probe new partitions"
+	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
+	invoke sleep 5
+	status_done
+}
+
 wait_for_cluster()
 {
 	status_long "Waiting for cluster"
