@@ -77,6 +77,9 @@ join_csync2()
 
 	status "Configuring csync2"
 
+	# Necessary if re-running join on a node that's been configured before.
+	invoke rm -f /var/lib/csync2/$(hostname).db
+
 	# Not automatically updating /etc/hosts - risky in the general case.
 	#etc_hosts_add_me
 	#local hosts_line=$(etc_hosts_get_me)
@@ -103,10 +106,11 @@ join_csync2()
 	invoke chkconfig csync2 on
 	start_service xinetd
 
-	# TODO: is there a better way to force everything here to be
-	# sync'd to the new node than "-mr /"?  Surely that shouldn't
-	# really be necessary...
-	invoke ssh root@$SEED_HOST 'csync2 -mr / ; csync2 -xv'
+	# -mr marks all as dirty
+	# -fr forces all in sync
+	# -P syncs only to one host
+	invoke ssh root@$SEED_HOST "csync2 -mr / ; csync2 -fr / ; csync2 -xv -P $(hostname)" \
+		|| warn "csync2 run failed - some files may not be sync'd"
 }
 
 join_cluster()
@@ -145,7 +149,7 @@ done
 
 shift $(($OPTIND - 1))
 
-if [ "$1" != "ssh" ]; then
+if [ "$1" != "ssh" -a "$1" != "csync2" ]; then
 	rcopenais status >/dev/null
 	rc=$?
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"

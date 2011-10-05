@@ -596,13 +596,13 @@ shift $(($OPTIND - 1))
 stage=$1 ; shift
 
 # vgfs stage requires running cluster, everything else requires inactive cluster,
-# except ssh (which doesn't care) and csync2_remote (which mustn't care, just in
-# case this breaks sleha-join on another node).
+# except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
+# just in case this breaks sleha-join on another node).
 rcopenais status >/dev/null
 rc=$?
 if [ "$stage" == "vgfs" ]; then
 	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
-elif [ "$stage" != "ssh" -a "$stage" != "csync2_remote" ]; then
+elif [ "$stage" != "ssh" -a "$stage" != "csync2" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
