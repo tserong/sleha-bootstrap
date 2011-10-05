@@ -30,3 +30,13 @@ dummy:
 archive:
 	rm -f sleha-bootstrap.tar.bz2
 	hg archive -t tbz2 sleha-bootstrap.tar.bz2
+
+# For testing purposes (helps if you have passwordless ssh...)
+deploy:
+	@if [ -z "$(TO)" ]; then \
+		echo "Run make TO=target-hostname deploy"; \
+	else \
+		scp scripts/sleha-functions $(TO):/usr/lib/; \
+		scp scripts/sleha-{init,join} $(TO):/usr/sbin/; \
+	fi
+
