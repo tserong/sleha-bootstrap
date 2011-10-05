@@ -358,14 +358,12 @@ Configure Shared Storage:
 	status_long "Creating partitions..."
 	invoke parted -s $dev mklabel msdos || error "Failed to create partition table"
 
-	# TODO: this is a bit rough, the most accurate we can make parted is to
-	# speak in sectors, but then it complains when it doesn't line up nicely
-	# with a cylinder, so we're just going for megabytes for the moment.
-	# fdisk incidentally may bitch about partitions not lining up on sector
-	# boundaries.  Also, I don't know if this causes performance issues due
-	# to alignment (some RAIDs like partitions to be nicely lined up..)
-	# TODO: doesn't seem to create big enough partition on opensuse(?!?)
-	invoke parted -s $dev mkpart primary 0 1M || error "Failed to create first partition"
+	# This is a bit rough, and probably won't result in great performance,
+	# but it's fine for test/demo purposes to carve off 1MB for SBD.  Note
+	# we have to specify the size of the first partition in this in bytes
+	# rather than MB, or parted's rounding gives us a ~30Kb partition
+	# (see rhbz#623268).
+	invoke parted -s $dev mkpart primary 0 1048576B || error "Failed to create first partition"
 	invoke parted -s $dev mkpart primary 1M 100% || error "Failed to create second partition"
 
 	status_done
