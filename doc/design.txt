@@ -1,0 +1,26 @@
+* Roughly, split into:
+  - init:
+    - ssh [ok]
+    - csync2 [ok]
+      - verify resolvable local hostname, don't add to /etc/hosts automatically
+        # perl -e "gethostbyname('$(hostname)') && exit 0 || exit 1;"
+    - corosync [ok]
+    - sbd if specified [ok]
+    - cluster [ok]
+  - join: [ok]
+    - ssh
+    - csync2
+    - cluster
+  - demo/template: [probably ok]
+    - sbd & ocfs2 (partitioned)
+    - vgfs
+  - warnings:
+    - no ntp
+
+* So, basically, we want:
+  - generic init
+  - option for sbd
+  - "template" to do ocfs2 or other things in future
+    - template to take arguments somehow (seed ocfs2 can take
+      -p to partition shared storage and -o of ocfs2 device)
+
