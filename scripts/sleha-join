@@ -34,7 +34,7 @@ usage()
 Usage: $0 [options] [stage]
 
 Options:
-    -c          IP address or hostname of existing cluster node
+    -c <host>   IP address or hostname of existing cluster node
     -i <if>     Default to IP address on interface 'if' instead of eth0
     -h          Display this usage information
     -q          Be quiet (don't describe what's happening, just do it)
