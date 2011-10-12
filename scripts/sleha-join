@@ -191,8 +191,8 @@ Join This Node to Cluster:
   password of the existing node.
 "
 		SEED_HOST=$(prompt_for_string \
-			'IP address of existing node (e.g.: 192.168.1.1)' \
-			'([0-9]+\.){3}[0-9]+')
+			'IP address or hostname of existing node (e.g.: 192.168.1.1)' \
+			'.+')
 	fi
 
 	join_ssh
