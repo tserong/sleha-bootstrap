@@ -153,6 +153,17 @@ done
 
 shift $(($OPTIND - 1))
 
+if [ "$1" == "ssh_test" ]; then
+	# Check whether passwordless ssh works or not.  Not a "regular" stage (i.e.
+	# never executed automatically, intended for use by external programs), so
+	# currently undocumented in usage text or man page.  Requires -c <host>.
+
+	[ -n "$SEED_HOST" ] || _die "No existing IP/hostname specified (use -c option)"
+	ssh -oBatchmode=yes -oStrictHostKeyChecking=no \
+		root@$SEED_HOST true 2>/dev/null
+	exit $?
+fi
+
 if [ "$1" != "ssh" -a "$1" != "csync2" ]; then
 	rcopenais status >/dev/null
 	rc=$?
