@@ -21,6 +21,7 @@ These may be in purview of sleha-bootstrap, or may be in appliance image:
   # crm node online node-1
 * don't error to log if log not started
 * is "partx -a <device>" any sort of sane replacement for partprobe?
+* Use ssh-copy-id instead of manual fiddling with authorized_keys?
 
 
 == STONITH Config ==
