@@ -214,7 +214,7 @@ crm_configure_load()
 	log ": loading crm config from $2, content is:"
 	cat $2 >> $LOG_FILE
 	invoke crm configure load $1 $2 \
-		|| error "Failed to load cluster configuration from $tmp_conf"
+		|| error "Failed to load cluster configuration from $2"
 	invoke rm $2
 }
 
