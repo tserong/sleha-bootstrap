@@ -31,6 +31,8 @@ declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
 declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
 declare -r COROSYNC_CONF=/etc/corosync/corosync.conf
 declare -r SYSCONFIG_SBD=/etc/sysconfig/sbd
+declare -r SYSCONFIG_FW=/etc/sysconfig/SuSEfirewall2
+declare -r SYSCONFIG_FW_CLUSTER=/etc/sysconfig/SuSEfirewall2.d/services/cluster
 
 declare BE_QUIET=false
 declare YES_TO_ALL=false
@@ -121,6 +123,51 @@ probe_partitions()
 	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
 	invoke sleep 5
 	status_done
+}
+
+# Configure /etc/sysconfig/SuSEfirewall2.d/services/cluster in much the same
+# way as yast2-cluster does.  If that file doesn't exist but the firewall is
+# on, warn the user that they'll need to configure things manually (the
+# assumption here is that yast2-cluster is generally also installed, so that
+# file should be present, and should be formatted reasonably sensibly).
+init_firewall()
+{
+	# ports for csync2, mgmtd, hawk & dlm respectively
+	local tcp="30865 5560 7630 21064"
+	# all mcastports defined in corosync config
+	local udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
+		${COROSYNC_CONF}))
+	local -i fw_open=0
+	if [ -f "$SYSCONFIG_FW_CLUSTER" ]; then
+		local tmp_conf=${SYSCONFIG_FW_CLUSTER}.$$
+		sed \
+			-e "s/^TCP=.*/TCP=\"$tcp\"/" \
+			-e "s/^UDP=.*/UDP=\"$udp\"/" \
+			$SYSCONFIG_FW_CLUSTER > $tmp_conf
+		install_tmp $tmp_conf $SYSCONFIG_FW_CLUSTER
+
+		if ! grep -q '^FW_CONFIGURATIONS_EXT=.*cluster' $SYSCONFIG_FW ; then
+			tmp_conf=${SYSCONFIG_FW}.$$
+			sed \
+				-e 's/^\(FW_CONFIGURATIONS_EXT="\)\(.*\)/\1cluster \2/' \
+				$SYSCONFIG_FW > $tmp_conf
+			install_tmp $tmp_conf $SYSCONFIG_FW
+		fi
+		fw_open=1
+	fi
+
+	# No need to do anything else if the firewall is inactive
+	rcSuSEfirewall2 status >/dev/null 2>&1 || return
+
+	# Firewall is active, either restart or complain if we couldn't tweak it
+	if [ $fw_open -eq 1 ]; then
+		status "Restarting firewall (TCP $tcp and UDP $udp open)"
+		invoke rcSuSEfirewall2 restart \
+			|| error "Failed to restart firewall"
+	else
+		warn "Firewall is active - you may need to open ports:"
+		warn "  TCP $tcp and UDP $udp"
+	fi
 }
 
 wait_for_cluster()
@@ -336,6 +383,8 @@ check_prereqs()
 	if [ $warned -ne 0 ]; then
 		confirm 'Do you want to continue anyway?' || exit
 	fi
+
+	init_firewall
 }
 
 log_start()
