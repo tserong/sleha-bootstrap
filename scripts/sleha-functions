@@ -95,7 +95,7 @@ start_service()
 # Determines if a service is chkconfig'd on (not if it's actually running)
 service_is_on()
 {
-	chkconfig $1 | egrep "$1[[:space:]]+on"
+	chkconfig $1 | egrep -q "$1[[:space:]]+on"
 }
 
 status()
