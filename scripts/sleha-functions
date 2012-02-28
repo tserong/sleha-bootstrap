@@ -387,6 +387,12 @@ check_prereqs()
 	init_firewall
 }
 
+init()
+{
+	log_start
+	init_network
+}
+
 log_start()
 {
 	# Convenient side-effect: this will die immediately if the log file
@@ -398,9 +404,10 @@ log_start()
 	# Now that we know we have at least some chance of running, catch
 	# all the interesting signals so we can terminate the log neatly.
 	trap _onexit 0 1 2 3 10 12 13 14 15
+}
 
-	# log_start() is a bit of a misnomer, we also set up some globals...
-
+init_network()
+{
 	# Auto-detection of IP address and netmask only works if $NET_IF is
 	# up. If $IP_ADDRESS is overridden, network detect shouldn't work,
 	# because "ip route" won't be able to help us.
