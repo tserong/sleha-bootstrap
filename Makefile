@@ -29,7 +29,7 @@ dummy:
 # Make a tar.bz2 of everything
 archive:
 	rm -f sleha-bootstrap.tar.bz2
-	hg archive -t tbz2 sleha-bootstrap.tar.bz2
+	git archive --prefix=sleha-bootstrap/ HEAD | bzip2 > sleha-bootstrap.tar.bz2
 
 # For testing purposes (helps if you have passwordless ssh...)
 deploy:

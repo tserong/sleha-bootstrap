@@ -1,0 +1,7 @@
+*.orig
+*.rej
+*.bak
+*~
+*.o
+*.tmp
+sleha-bootstrap*.tar.bz2
