@@ -176,11 +176,11 @@ check_prereqs
 
 case $1 in
 ssh|csync2|cluster)
-	log_start
+	init
 	join_$1
 	;;
 "")
-	log_start
+	init
 
 	if ! $YES_TO_ALL && [ -z "$SEED_HOST" ]; then
 		status "

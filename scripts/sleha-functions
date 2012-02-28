@@ -95,7 +95,7 @@ start_service()
 # Determines if a service is chkconfig'd on (not if it's actually running)
 service_is_on()
 {
-	chkconfig $1 | egrep "$1[[:space:]]+on"
+	chkconfig $1 | egrep -q "$1[[:space:]]+on"
 }
 
 status()
@@ -134,9 +134,14 @@ init_firewall()
 {
 	# ports for csync2, mgmtd, hawk & dlm respectively
 	local tcp="30865 5560 7630 21064"
+
 	# all mcastports defined in corosync config
-	local udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
-		${COROSYNC_CONF}))
+	local udp
+	if [ -f "$COROSYNC_CONF" ]; then
+		udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
+			${COROSYNC_CONF}))
+	fi
+
 	local -i fw_open=0
 	if [ -f "$SYSCONFIG_FW_CLUSTER" ]; then
 		local tmp_conf=${SYSCONFIG_FW_CLUSTER}.$$
@@ -161,12 +166,12 @@ init_firewall()
 
 	# Firewall is active, either restart or complain if we couldn't tweak it
 	if [ $fw_open -eq 1 ]; then
-		status "Restarting firewall (TCP $tcp and UDP $udp open)"
+		status "Restarting firewall (TCP $tcp and UDP ${udp:-none} open)"
 		invoke rcSuSEfirewall2 restart \
 			|| error "Failed to restart firewall"
 	else
 		warn "Firewall is active - you may need to open ports:"
-		warn "  TCP $tcp and UDP $udp"
+		warn "	TCP $tcp and UDP ${udp:-none}"
 	fi
 }
 
@@ -387,6 +392,12 @@ check_prereqs()
 	init_firewall
 }
 
+init()
+{
+	log_start
+	init_network
+}
+
 log_start()
 {
 	# Convenient side-effect: this will die immediately if the log file
@@ -398,9 +409,10 @@ log_start()
 	# Now that we know we have at least some chance of running, catch
 	# all the interesting signals so we can terminate the log neatly.
 	trap _onexit 0 1 2 3 10 12 13 14 15
+}
 
-	# log_start() is a bit of a misnomer, we also set up some globals...
-
+init_network()
+{
 	# Auto-detection of IP address and netmask only works if $NET_IF is
 	# up. If $IP_ADDRESS is overridden, network detect shouldn't work,
 	# because "ip route" won't be able to help us.
