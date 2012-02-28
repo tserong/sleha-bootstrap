@@ -134,9 +134,14 @@ init_firewall()
 {
 	# ports for csync2, mgmtd, hawk & dlm respectively
 	local tcp="30865 5560 7630 21064"
+
 	# all mcastports defined in corosync config
-	local udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
-		${COROSYNC_CONF}))
+	local udp
+	if [ -f "$COROSYNC_CONF" ]; then
+		udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
+			${COROSYNC_CONF}))
+	fi
+
 	local -i fw_open=0
 	if [ -f "$SYSCONFIG_FW_CLUSTER" ]; then
 		local tmp_conf=${SYSCONFIG_FW_CLUSTER}.$$
@@ -161,12 +166,12 @@ init_firewall()
 
 	# Firewall is active, either restart or complain if we couldn't tweak it
 	if [ $fw_open -eq 1 ]; then
-		status "Restarting firewall (TCP $tcp and UDP $udp open)"
+		status "Restarting firewall (TCP $tcp and UDP ${udp:-none} open)"
 		invoke rcSuSEfirewall2 restart \
 			|| error "Failed to restart firewall"
 	else
 		warn "Firewall is active - you may need to open ports:"
-		warn "  TCP $tcp and UDP $udp"
+		warn "	TCP $tcp and UDP ${udp:-none}"
 	fi
 }
 
