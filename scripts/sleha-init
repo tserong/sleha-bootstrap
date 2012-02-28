@@ -615,13 +615,13 @@ esac
 
 case $stage in
 ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
-	log_start
+	init
 	# $2 == nasty hack to pick up IP arg to csync2_remote (not strictly
 	# necessary currently, as we're not auto-updating /etc/hosts)
 	init_$stage "$@"
 	;;
 "")
-	log_start
+	init
 	init_ssh
 	init_csync2
 	init_corosync
