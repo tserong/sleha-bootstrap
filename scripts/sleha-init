@@ -121,6 +121,7 @@ group ha_group
 {
 	key /etc/csync2/key_hagroup;
 	host $(hostname);
+	include /etc/booth/booth.conf;
 	include /etc/corosync/corosync.conf;
 	include /etc/corosync/authkey;
 	include /etc/csync2/csync2.cfg;
@@ -131,7 +132,6 @@ group ha_group
 	include /etc/lvm/lvm.conf;
 	include /etc/multipath.conf;
 	include /etc/samba/smb.conf;
-	include /etc/sysconfig/booth;
 	include /etc/sysconfig/openais;
 	include /etc/sysconfig/pacemaker;
 	include /etc/sysconfig/sbd;
