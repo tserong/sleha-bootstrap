@@ -1,7 +1,7 @@
 # /usr/lib/sleha-functions
 # Supporting functions for /usr/sbin/sleha-{init,join}
 #
-# Copyright (c) 2010-2011 Novell Inc. All Rights Reserved.
+# Copyright (c) 2010-2012 Novell Inc. All Rights Reserved.
 #
 # Author: Tim Serong <tserong@suse.com>
 #
