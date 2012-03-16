@@ -18,8 +18,10 @@ node.
 .IP 2.
 Use csync2 to obtain other configuration files.
 .IP 3.
-Join the cluster.
+Merge root's SSH known_hosts files across all nodes.
 .IP 4.
+Join the cluster.
+.IP 5.
 Start Hawk, so you can monitor the cluster and perform further
 configuration in your web browser.
 .PP
@@ -49,7 +51,8 @@ instead of eth0.
 Invoke only one stage of the cluster join.  The stage can be
 any one of
 .I ssh,
-.I csync2
+.I csync2,
+.I ssh_merge
 or
 \fIcluster\fR.  If unspecified, each stage will be executed
 in sequence.
@@ -60,6 +63,7 @@ created or modified by \fBsleha-join\fR:
 .I /root/.ssh/id_rsa
 .I /root/.ssh/id_rsa.pub
 .I /root/.ssh/authorized_keys
+.I /root/.ssh/known_hosts
 .RS
 Default ssh key and authorized_keys file for root user.
 .RE

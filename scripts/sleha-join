@@ -43,6 +43,8 @@ Options:
 Stage can be one of:
     ssh         Obtain SSH keys from existing cluster node (requires -c <ip>)
     csync2      Configure csync2 (requires -c <ip>)
+    ssh_merge   Merge root's SSH known_hosts across all nodes (csync2 must
+                already be configured).
     cluster     Start the cluster on this node
 
 If stage is not specified, each stage will be invoked in sequence.
@@ -113,6 +115,36 @@ join_csync2()
 		|| warn "csync2 run failed - some files may not be sync'd"
 }
 
+join_ssh_merge()
+{
+	status "Merging known_hosts"
+
+	local host_args=$(awk '/^[[:space:]]*host[[:space:]]/ { print "-H", $2 }' \
+		$CSYNC2_CFG | sed -e 's/;//')
+
+	[ -z "$host_args" ] && error "Unable to extract host list from $CSYNC2_CFG"
+
+	local tmp_dir=/tmp/sleha-pssh.$$
+	invoke mkdir -p $tmp_dir || error "Can't create temporary directory $tmp_dir"
+	invoke rm -f $tmp_dir/*
+	# The act of using pssh to connect to every host (without strict host key
+	# checking) ensures that at least *this* host has every other host in its
+	# known_hosts
+	invoke pssh $host_args -O StrictHostKeyChecking=no -o $tmp_dir \
+		cat ~/.ssh/known_hosts
+	local rc=$?
+	# 0 == success, 5 == ssh OK but remote command failed - we're ignoring
+	# this because it's most likely known_hosts doesn't exist.
+	[ $rc -ne 0 -a $rc -ne 5 ] && warn "known_hosts collection may be incomplete"
+	# Sort combines everything we grabbed with our latest local known_hosts
+	sort -u $tmp_dir/* ~/.ssh/known_hosts > ~/.ssh/known_hosts.new
+	invoke pscp $host_args -O StrictHostKeyChecking=no \
+		~/.ssh/known_hosts.new ~/.ssh/known_hosts \
+		|| warn "known_hosts merge may be incomplete"
+	invoke rm ~/.ssh/known_hosts.new
+	invoke rm -r $tmp_dir
+}
+
 join_cluster()
 {
 	# Need to do this if second (or subsequent) node happens to be up and
@@ -164,7 +196,7 @@ if [ "$1" == "ssh_test" ]; then
 	exit $?
 fi
 
-if [ "$1" != "ssh" -a "$1" != "csync2" ]; then
+if [ "$1" != "ssh" -a "$1" != "csync2" -a "$1" != "ssh_merge" ]; then
 	rcopenais status >/dev/null
 	rc=$?
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
@@ -175,7 +207,7 @@ fi
 check_prereqs
 
 case $1 in
-ssh|csync2|cluster)
+ssh|csync2|ssh_merge|cluster)
 	init
 	join_$1
 	;;
@@ -197,6 +229,7 @@ Join This Node to Cluster:
 
 	join_ssh
 	join_csync2
+	join_ssh_merge
 	join_cluster
 	;;
 *)	echo -e "Invalid stage ($1)\n"

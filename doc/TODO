@@ -12,6 +12,10 @@ These may be in purview of sleha-bootstrap, or may be in appliance image:
 
 == General / Random ==
 
+* csync2_remote assumes there's only one group in csync2.cfg, or, more to
+  the point, will only add new hosts to the first group.
+* Likewise, ssh_merge grabs all hosts regardless of what group they're in
+  (although this is probably fine)
 * get rid of curses junk in log file (fix ENV term)
 * Multi-device SBD (use multiple -s args)
 * Start new node on standby
