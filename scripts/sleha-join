@@ -108,6 +108,12 @@ join_csync2()
 	invoke chkconfig csync2 on
 	start_service xinetd
 
+	# Sync csync2.cfg out to all hosts (else hosts other than the seed and
+	# the joining host won't have the joining host in their config yet).
+	invoke ssh root@$SEED_HOST "csync2 -m $CSYNC2_CFG ; csync2 -f $CSYNC2_CFG ; csync2 -xv $CSYNC2_CFG" \
+		|| warn "csync2 of $CSYNC2_CFG failed - file may not be in sync on all nodes"
+
+	# Sync everything else to the joining node only
 	# -mr marks all as dirty
 	# -fr forces all in sync
 	# -P syncs only to one host
