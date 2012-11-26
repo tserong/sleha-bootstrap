@@ -1,0 +1,137 @@
+#!/bin/bash
+#
+# Copyright (c) 2010-2012 Novell Inc. All Rights Reserved.
+#
+# Author:Xia Li <xli@suse.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of version 2 of the GNU General Public License as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it would be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# Further, this software is distributed without any warranty that it is
+# free of the rightful claim of any third person regarding infringement
+# or the like.  Any license provided herein, whether implied or
+# otherwise, applies only to this software file.  Patent licenses, if
+# any, provided herein do not apply to combinations of this program with
+# other software, or any other product whatsoever.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write the Free Software Foundation,
+# Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
+#
+
+. /usr/lib/sleha-functions
+
+declare SEED_HOST
+
+usage()
+{
+	cat <<END
+Usage: $0 [options] 
+
+Options:
+    -c <host>   IP address or hostname of cluster node which will be deleted
+    -h          Display this usage information
+    -q          Be quiet (don't describe what's happening, just do it)
+    -y          Answer "yes" to all prompts (use with care)
+
+END
+	exit 0
+}
+
+remove_ssh()
+{
+	[ -n "$SEED_HOST" ] || error "No existing IP/hostname specified (use -c option)"
+
+	start_service sshd
+
+	#get the node name 
+	local nodename=`ssh root@$SEED_HOST "hostname"`
+	echo $nodename
+}
+
+remove_cluster()
+{
+	#ssh the SEED_HOST, execute command: stop_service
+  	status "Stopping the openais service"
+	
+	#invoke ssh root@$SEED_HOST "rcopenais stop && rm /etc/corosync/corosync.conf " \
+	invoke ssh root@$SEED_HOST "rcopenais stop " \
+      		|| error "stop the service rcopenais on $SEED_HOST failed"
+
+	#execute the command : crm node delete $HOSTNAME
+	status "Removing the node $SEED_HOST"
+	
+	invoke crm node delete $SEED_HOST
+	local rc=$?
+	# 0 == success
+	[ $rc -ne 0 ] && error "Can not remove the node: $SEED_HOST" 
+	
+	#delete the line include the $SEED_HOST
+	invoke sed -i /$SEED_HOST/d $CSYNC2_CFG \
+		|| error "remove the node $SEED_HOST from file $CSYNC2_CFG failed"
+
+	status "Propagating the files across the surviving nodes"
+	#csync the file to all the node
+	invoke csync2 -xv || error "Propagate the file $CYNC2_CFG failed"
+
+	#delete the configure file from the node $SEED_HOST
+	invoke ssh root@$SEED_HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
+			$COROSYNC_CONF $CSYNC2_KEY \
+			&& rm -f /var/lib/heartbeat/crm/* " \
+			|| error "Delete the configure files failed"
+}
+
+remove_hostname_check()
+{
+	#check whether the openais service has been started on local node	
+	rcopenais status >/dev/null                                      
+	rc=$?                                                            
+	[ $rc -ne 0 ] && error "Cluster is not active - can't execute removing action" 
+	
+        #get the node name 
+        local nodename=`ssh root@$SEED_HOST "hostname"`
+        SEED_HOST=$nodename
+	
+	#check whether the specified node is exist at the cluster
+	crm node show |grep $SEED_HOST >/dev/null
+	rc=$?
+	if [ $rc -ne 0 ]; then
+		error "Specified node $SEED_HOST is \
+			not configured in cluster, can not execute removing action"
+	fi
+
+	#check whether the specified node is local node
+	rc=`hostname`
+	if [ "$rc" == "$SEED_HOST" ]; then
+		error "Specified node $SEED_HOST is local host, \
+			can note execute removing action on local host"
+	fi
+}
+#------------------------------------------------------------------------------
+
+while getopts 'c:hqy' o; do
+	case $o in
+	c) SEED_HOST=$OPTARG;;
+	h) usage;;
+	q) BE_QUIET=true;;
+	y) YES_TO_ALL=true;;
+	*) usage;;
+	esac
+done
+
+[ $OPTIND -eq 1 ] && usage
+
+[ -n "$SEED_HOST" ] || _die "No existing IP/hostname specified (use -c option)"
+
+init
+remove_ssh
+remove_hostname_check
+remove_cluster
+
+status "Done (log saved to $LOG_FILE)"
+exit 0
