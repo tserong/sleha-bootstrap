@@ -23,32 +23,20 @@ Answer "yes" to all prompts (use with caution).
 .TP
 .BI "-c " host
 Specify IP address or hostname of removing cluster node.
-.SH FILES
-In addition to ssh to the specified node, the following files are
-created by \fBsleha-remove\fR:
-.PP
-.I /root/.ssh/id_rsa
-.I /root/.ssh/id_rsa.pub
-.I /root/.ssh/authorized_keys
-.I /root/.ssh/known_hosts
-.RS
-Default ssh key and authorized_keys file for root user.
-.PP
-.RE
+.SH FILE
 In addition to remove the node clearly from cluster, the following files
 are deleted from the node by \fBsleha-remove\fR:
 .PP
-.RE
-.I /etc/csync2/csync2.cfg
-.I /etc/csync2/key_hagroup
+.BI /etc/csync2/csync2.cfg
+.BI /etc/csync2/key_hagroup
 .RS
 csync2 configuration files.
 .RE
-.I /etc/corosync/corosync.conf
+.BI /etc/corosync/corosync.conf
 .RS
 corosync configuration file.
 .RE
-.I /etc/sysconfig/sbd
+.BI /etc/sysconfig/sbd
 .RS
 SBD fencing configuration.
 .RE
