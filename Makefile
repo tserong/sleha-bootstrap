@@ -37,6 +37,6 @@ deploy:
 		echo "Run make TO=target-hostname deploy"; \
 	else \
 		scp scripts/sleha-functions $(TO):/usr/lib/; \
-		scp scripts/sleha-{init,join} $(TO):/usr/sbin/; \
+		scp scripts/sleha-{init,join,remove} $(TO):/usr/sbin/; \
 	fi
 

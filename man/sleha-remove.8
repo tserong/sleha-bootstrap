@@ -1,0 +1,65 @@
+.TH SLEHA-REMOVE 8 "2012-11-01"
+.SH NAME
+sleha-remove \- remove a node from an existing HA cluster.
+.SH SYNOPSIS
+.B sleha-remove
+[\fB-hqy\fR]
+[\fB-c\fR \fIhost\fR]
+.SH DESCRIPTION
+.B sleha-remove
+removing the specified node from a SUSE Linux Enterprise High 
+Availability cluster.  It is can not be invoked without 
+arguments. 
+.SH OPTIONS
+.TP
+.B -h
+Display help message.
+.TP
+.B -q
+Be quiet (don't describe what's happening, just do it).
+.TP
+.B -y
+Answer "yes" to all prompts (use with caution).
+.TP
+.BI "-c " host
+Specify IP address or hostname of removing cluster node.
+.SH FILES
+In addition to ssh to the specified node, the following files are
+created by \fBsleha-remove\fR:
+.PP
+.I /root/.ssh/id_rsa
+.I /root/.ssh/id_rsa.pub
+.I /root/.ssh/authorized_keys
+.I /root/.ssh/known_hosts
+.RS
+Default ssh key and authorized_keys file for root user.
+.PP
+.RE
+In addition to remove the node clearly from cluster, the following files
+are deleted from the node by \fBsleha-remove\fR:
+.PP
+.RE
+.I /etc/csync2/csync2.cfg
+.I /etc/csync2/key_hagroup
+.RS
+csync2 configuration files.
+.RE
+.I /etc/corosync/corosync.conf
+.RS
+corosync configuration file.
+.RE
+.I /etc/sysconfig/sbd
+.RS
+SBD fencing configuration.
+.RE
+.PP
+.SH DIAGNOSTICS
+A complete log of all actions is written to
+.I /var/log/sleha-bootstrap.log
+.SH "SEE ALSO"
+.BR csync2 (1),
+.BR corosync (8),
+.BR sleha-init (8)
+.BR sleha-join (8)
+.SH AUTHOR
+Xia Li <xli@suse.com>
