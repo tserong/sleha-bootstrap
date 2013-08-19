@@ -200,7 +200,7 @@ init_cluster_local()
 linux
 linux
 EOF
-		[ $? -ne 0 ] && log ": Failed to reset password of hacluster user"
+		[ $? -ne 0 ] && warn ": Failed to reset password of hacluster user"
 		pass_msg=", password 'linux'"
 	fi
 
