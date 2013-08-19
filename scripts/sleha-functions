@@ -196,10 +196,11 @@ init_cluster_local()
 	local pass_msg
 	if [ "$ps" != "PS" ]; then
 		log ': Resetting password of hacluster user'
-		passwd > /dev/null 2>&1 <<EOF
+		passwd hacluster > /dev/null 2>&1 <<EOF
 linux
 linux
 EOF
+		[ $? -ne 0 ] && log ": Failed to reset password of hacluster user"
 		pass_msg=", password 'linux'"
 	fi
 
