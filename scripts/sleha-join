@@ -106,6 +106,10 @@ join_csync2()
 	# Can't use start_service for csync2, because it runs inside xinetd
 	status "Enabling csync2 service"
 	invoke chkconfig csync2 on
+	# silently reload xinetd (without this, if xinetd is already running,
+	# it won't realize csync2 is meant to be active, and init/join won't
+	# work - bnc#774688)
+	rcxinetd reload >/dev/null 2>&1
 	start_service xinetd
 
 	# Sync csync2.cfg out to all hosts (else hosts other than the seed and
