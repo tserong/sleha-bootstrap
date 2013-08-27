@@ -87,7 +87,7 @@ start_service()
 	invoke chkconfig $1 on
 	rc$1 status >/dev/null
 	if [ $? -ne 0 ]; then
-		invoke rc$1 start
+		invoke rc$1 start 2>/dev/null
 		[ $? -ne 0 ] && error "Failed to start $1 service"
 	fi
 }
@@ -205,7 +205,7 @@ EOF
 	fi
 
 	# evil, but necessary
-	invoke rm -f /var/lib/heartbeat/crm/*
+	invoke rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*
 
 	start_service hawk
 	status "  HA Web Konsole is now running, to see cluster status go to:"

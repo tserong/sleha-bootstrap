@@ -37,7 +37,7 @@ usage()
 Usage: $0 [options] [stage]
 
 Options:
-    -h          Display this usage information
+    -h,--help   Display this usage information
     -q          Be quiet (don't describe what's happening, just do it)
     -y          Answer "yes" to all prompts (use with caution, this is
                 destructive, especially during the "storage" stage)
@@ -572,6 +572,9 @@ END
 }
 
 #------------------------------------------------------------------------------
+
+# for --help option
+[ "$1" == "--help" ] && usage
 
 while getopts 'hi:o:p:qs:t:y' o; do
 	case $o in

@@ -27,6 +27,8 @@
 . /usr/lib/sleha-functions
 
 declare SEED_HOST
+declare HOST_STATUS
+declare HOST
 
 usage()
 {
@@ -35,12 +37,26 @@ Usage: $0 [options]
 
 Options:
     -c <host>   IP address or hostname of cluster node which will be deleted
-    -h          Display this usage information
+    -h,--help   Display this usage information
     -q          Be quiet (don't describe what's happening, just do it)
     -y          Answer "yes" to all prompts (use with care)
 
 END
 	exit 0
+}
+
+prompt()
+{
+	local msg=$1
+	local default
+	local tmp
+
+	while [ -z "$default" ]; do
+		read -e -p "  $msg " tmp
+		[ -n "$tmp" ] && default=$tmp
+	done
+
+	echo $default
 }
 
 remove_ssh()
@@ -49,19 +65,98 @@ remove_ssh()
 
 	start_service sshd
 
-	#get the node name 
-	local nodename=`ssh root@$SEED_HOST "hostname"`
-	echo $nodename
+	#check whether the openais service has been started on local node
+	invoke rcopenais status >/dev/null
+	local rc=$?
+	[ $rc -ne 0 ] && error "Cluster is not active - can't execute removing action"
+
+	remove_get_hostname
+}
+
+remove_get_hostname()
+{
+	#get the node name
+	local nodename=`ssh root@$SEED_HOST "hostname" 2>/dev/null`
+	if [ -z $nodename ]; then
+		#0==disconnected 1==connected 2==connected through ipaddr
+		HOST_STATUS=0
+
+		echo $SEED_HOST |grep -E '^([0-9]+\.){3}[0-9]+$' >/dev/null
+		local rc=$?
+		if [ $rc -eq 0 ]; then
+			#input the HOSTNAME
+			warn "Could not connect to $SEED_HOST"
+			nodename=$(prompt 'Please enter the hostname of the node to be removed : ' )
+			[ -z "$nodename" ] && error 'Not input valid hostname'
+
+			crm_node --list |grep -w $nodename >/dev/null
+			[ $? -ne 0 ] && error "Specified node $nodename is \
+									    			not configured in cluster, can not execute removing action"
+
+			#try to use the host name to connect
+			local node=`ssh root@$nodename "hostname" 2>/dev/null`
+			if [ -n "$node" ]; then
+				nodename=$node
+				HOST_STATUS=1
+				HOST=$nodename
+			else
+				HOST_STATUS=0
+			fi
+		else
+			crm_node --list |grep -w $SEED_HOST >/dev/null
+			[ $? -ne 0 ] && error "Specified node $SEED_HOST is \
+														not configured in cluster, can not execute removing action"
+
+			warn "Could not resolve hostname $SEED_HOST"
+			ipaddr=$(prompt 'Please enter the IP address of the node to be removed (e.g: 192.168.0.1): ')
+			[ -z "$ipaddr" ] && error 'Not input valid IP address'
+
+			#try to use the IP address to connect
+			nodename=`ssh root@$ipaddr "hostname" 2>/dev/null`
+			if [ -z $nodename ] ; then
+				HOST_STATUS=0;
+				nodename=$SEED_HOST
+			else
+				if [ $nodename != $SEED_HOST ]; then
+					warn "Specified IP address $ipaddr is node $nodename, not configured in cluster "
+					warn "Try to remove node $SEED_HOST "
+					nodename=$SEED_HOST
+					HOST_STATUS=0;
+				else
+					HOST_STATUS=2;
+					HOST=$ipaddr
+				fi
+			fi
+		fi
+	else
+		HOST_STATUS=1
+		HOST=$SEED_HOST
+	fi
+
+	SEED_HOST=$nodename
 }
 
 remove_cluster()
 {
-	#ssh the SEED_HOST, execute command: stop_service
-  	status "Stopping the openais service"
+	if [ $HOST_STATUS -ne 0 ]; then
+		status "Stopping the openais service"
 	
-	#invoke ssh root@$SEED_HOST "rcopenais stop && rm /etc/corosync/corosync.conf " \
-	invoke ssh root@$SEED_HOST "rcopenais stop " \
+		#invoke ssh root@$SEED_HOST "rcopenais stop && rm /etc/corosync/corosync.conf " \
+		invoke ssh root@$HOST "rcopenais stop" \
       		|| error "stop the service rcopenais on $SEED_HOST failed"
+
+		#delete the configure file from the node $SEED_HOST
+		invoke ssh root@$HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
+				$COROSYNC_CONF $CSYNC2_KEY \
+				&& rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*" \
+				|| error "Delete the configure files failed"
+	else
+		#check node status
+		invoke crm_node --list |grep -w $SEED_HOST |grep "lost"
+		if [ $? -ne 0 ]; then
+						confirm 'The node has not been cleaned up... - remove it?' || return
+		fi
+	fi
 
 	#execute the command : crm node delete $HOSTNAME
 	status "Removing the node $SEED_HOST"
@@ -69,7 +164,7 @@ remove_cluster()
 	invoke crm node delete $SEED_HOST
 	local rc=$?
 	# 0 == success
-	[ $rc -ne 0 ] && error "Can not remove the node: $SEED_HOST" 
+	[ $rc -ne 0 ] && error "Can not remove the node $SEED_HOST"
 	
 	#delete the line include the $SEED_HOST
 	invoke sed -i /$SEED_HOST/d $CSYNC2_CFG \
@@ -77,29 +172,14 @@ remove_cluster()
 
 	status "Propagating the files across the surviving nodes"
 	#csync the file to all the node
-	invoke csync2 -xv || error "Propagate the file $CYNC2_CFG failed"
-
-	#delete the configure file from the node $SEED_HOST
-	invoke ssh root@$SEED_HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
-			$COROSYNC_CONF $CSYNC2_KEY \
-			&& rm -f /var/lib/heartbeat/crm/* " \
-			|| error "Delete the configure files failed"
+	invoke csync2 -f $CSYNC2_CFG && csync2 -xv >/dev/null 2>&1 || error "Propagate the file $CYNC2_CFG failed"
 }
 
 remove_hostname_check()
 {
-	#check whether the openais service has been started on local node	
-	rcopenais status >/dev/null                                      
-	rc=$?                                                            
-	[ $rc -ne 0 ] && error "Cluster is not active - can't execute removing action" 
-	
-        #get the node name 
-        local nodename=`ssh root@$SEED_HOST "hostname"`
-        SEED_HOST=$nodename
-	
 	#check whether the specified node is exist at the cluster
-	crm node show |grep $SEED_HOST >/dev/null
-	rc=$?
+	crm_node --list |grep -w $SEED_HOST >/dev/null
+	local rc=$?
 	if [ $rc -ne 0 ]; then
 		error "Specified node $SEED_HOST is \
 			not configured in cluster, can not execute removing action"
@@ -113,6 +193,9 @@ remove_hostname_check()
 	fi
 }
 #------------------------------------------------------------------------------
+
+# for --help option
+[ "$1" == "--help" ] && usage
 
 while getopts 'c:hqy' o; do
 	case $o in
