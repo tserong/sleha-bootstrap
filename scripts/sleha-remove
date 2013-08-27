@@ -77,12 +77,12 @@ remove_cluster()
 
 	status "Propagating the files across the surviving nodes"
 	#csync the file to all the node
-	invoke csync2 -xv || error "Propagate the file $CYNC2_CFG failed"
+	invoke csync2 -f $CSYNC2_CFG && csync2 -xv || error "Propagate the file $CYNC2_CFG failed"
 
 	#delete the configure file from the node $SEED_HOST
 	invoke ssh root@$SEED_HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
 			$COROSYNC_CONF $CSYNC2_KEY \
-			&& rm -f /var/lib/heartbeat/crm/* " \
+			&& rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*" \
 			|| error "Delete the configure files failed"
 }
 

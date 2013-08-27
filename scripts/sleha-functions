@@ -205,7 +205,7 @@ EOF
 	fi
 
 	# evil, but necessary
-	invoke rm -f /var/lib/heartbeat/crm/*
+	invoke rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*
 
 	start_service hawk
 	status "  HA Web Konsole is now running, to see cluster status go to:"
