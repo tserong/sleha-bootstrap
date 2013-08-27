@@ -36,7 +36,7 @@ Usage: $0 [options] [stage]
 Options:
     -c <host>   IP address or hostname of existing cluster node
     -i <if>     Default to IP address on interface 'if' instead of eth0
-    -h          Display this usage information
+    -h,--help   Display this usage information
     -q          Be quiet (don't describe what's happening, just do it)
     -y          Answer "yes" to all prompts (use with care)
 
@@ -178,6 +178,9 @@ join_cluster()
 }
 
 #------------------------------------------------------------------------------
+
+# for --help option
+[ "$1" == "--help" ] && usage
 
 while getopts 'c:i:hqy' o; do
 	case $o in
