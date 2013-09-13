@@ -24,7 +24,7 @@
 #
 
 dummy:
-	@echo 'Not much here yet - try "make archive"'
+	@echo 'Not much here yet - try `make archive` or `make TO=$$some_hostname deploy`'
 
 # Make a tar.bz2 of everything
 archive:
