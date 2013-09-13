@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2010-2011 Novell Inc. All Rights Reserved.
+# Copyright (c) 2010-2013 SUSE LLC, All Rights Reserved.
 #
 # Author: Tim Serong <tserong@suse.com>
 #
