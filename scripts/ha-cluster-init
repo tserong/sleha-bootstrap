@@ -24,7 +24,7 @@
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
 
-. /usr/lib/sleha-functions
+. /usr/lib/ha-cluster-functions
 
 declare SHARED_DEVICE
 declare SBD_DEVICE
@@ -158,9 +158,9 @@ END
 # That way, adding a new node would just mean adding a single new file
 # to that directory.  Unfortunately, the 'config' statement only allows
 # inclusion of specific individual files, not multiple files via wildcard.
-# So we have this function which is called by sleha-join to add the new
+# So we have this function which is called by ha-cluster-join to add the new
 # remote node to csync2 config on some existing node.  It is intentionally
-# not documented in sleha-init's user-visible usage information.
+# not documented in ha-cluster-init's user-visible usage information.
 init_csync2_remote()
 {
 	local newhost=$1
@@ -599,7 +599,7 @@ stage=$1 ; shift
 
 # vgfs stage requires running cluster, everything else requires inactive cluster,
 # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
-# just in case this breaks sleha-join on another node).
+# just in case this breaks ha-cluster-join on another node).
 rcopenais status >/dev/null
 rc=$?
 if [ "$stage" == "vgfs" ]; then

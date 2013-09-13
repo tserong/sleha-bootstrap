@@ -1,12 +1,12 @@
-.TH SLEHA-REMOVE 8 "2012-11-01"
+.TH HA-CLUSTER-REMOVE 8 "2012-11-01"
 .SH NAME
-sleha-remove \- remove a node from an existing HA cluster.
+ha-cluster-remove \- remove a node from an existing HA cluster.
 .SH SYNOPSIS
-.B sleha-remove
+.B ha-cluster-remove
 [\fB-hqy\fR]
 [\fB-c\fR \fIhost\fR]
 .SH DESCRIPTION
-.B sleha-remove
+.B ha-cluster-remove
 removing the specified node from a SUSE Linux Enterprise High 
 Availability cluster.  It is can not be invoked without 
 arguments. 
@@ -25,7 +25,7 @@ Answer "yes" to all prompts (use with caution).
 Specify IP address or hostname of removing cluster node.
 .SH FILE
 In addition to remove the node clearly from cluster, the following files
-are deleted from the node by \fBsleha-remove\fR:
+are deleted from the node by \fBha-cluster-remove\fR:
 .PP
 .BI /etc/csync2/csync2.cfg
 .BI /etc/csync2/key_hagroup
@@ -43,11 +43,11 @@ SBD fencing configuration.
 .PP
 .SH DIAGNOSTICS
 A complete log of all actions is written to
-.I /var/log/sleha-bootstrap.log
+.I /var/log/ha-cluster-bootstrap.log
 .SH "SEE ALSO"
 .BR csync2 (1),
 .BR corosync (8),
-.BR sleha-init (8)
-.BR sleha-join (8)
+.BR ha-cluster-init (8)
+.BR ha-cluster-join (8)
 .SH AUTHOR
 Xia Li <xli@suse.com>

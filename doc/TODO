@@ -4,7 +4,7 @@ TODO
 
 == Unclear Responsibility ==
 
-These may be in purview of sleha-bootstrap, or may be in appliance image:
+These may be in purview of ha-cluster-bootstrap, or may be in appliance image:
 
 * install debuginfo packages
 * enable coredumps
@@ -46,7 +46,7 @@ Generally specific to OCFS2 template ATM, as that's the only one extant.
 * Probably need to prompt user for new partitions after carving, should
   they not be found (FFS).
 * ocfs2 template is not the same as Hawk's.  Consider enhancing
-  sleha-bootstrap so it uses Hawk's templates directly rather than using
+  ha-cluster-bootstrap so it uses Hawk's templates directly rather than using
   its own.
 * Ensure required RPMs are installed when running template (they're just
   Recommends in the spec)

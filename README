@@ -1,3 +1,3 @@
-SLE HA Bootstrap
+HA Cluster Bootstrap
 
-Tool to bootstrap a SLE HA cluster in a hurry.
+Tool to bootstrap a Pacemaker High Availability cluster in a hurry.

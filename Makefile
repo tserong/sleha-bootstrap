@@ -28,15 +28,15 @@ dummy:
 
 # Make a tar.bz2 of everything
 archive:
-	rm -f sleha-bootstrap.tar.bz2
-	git archive --prefix=sleha-bootstrap/ HEAD | bzip2 > sleha-bootstrap.tar.bz2
+	rm -f ha-cluster-bootstrap.tar.bz2
+	git archive --prefix=ha-cluster-bootstrap/ HEAD | bzip2 > ha-cluster-bootstrap.tar.bz2
 
 # For testing purposes (helps if you have passwordless ssh...)
 deploy:
 	@if [ -z "$(TO)" ]; then \
 		echo "Run make TO=target-hostname deploy"; \
 	else \
-		scp scripts/sleha-functions $(TO):/usr/lib/; \
-		scp scripts/sleha-{init,join,remove} $(TO):/usr/sbin/; \
+		scp scripts/ha-cluster-functions $(TO):/usr/lib/; \
+		scp scripts/ha-cluster-{init,join,remove} $(TO):/usr/sbin/; \
 	fi
 

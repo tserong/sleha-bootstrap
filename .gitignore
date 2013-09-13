@@ -5,3 +5,4 @@
 *.o
 *.tmp
 sleha-bootstrap*.tar.bz2
+ha-cluster-bootstrap*.tar.bz2
