@@ -222,63 +222,71 @@ Configure Corosync:
 	[ -z "$mcastport" ] && error 'No value for mcastport'
 
 	local tmp_conf=${COROSYNC_CONF}.$$
-	if grep -q -s '^[[:space:]]*name:[[:space:]]*pacemaker' ${COROSYNC_CONF}.example; then
-		# "name: pacemaker" in corosync example conf is our assumption
-		# that the example is sane, so use it:
-		sed \
-			-e 's/^\([[:space:]]*bindnetaddr:[[:space:]]*\).*/\1'$bindnetaddr'/' \
-			-e 's/^\([[:space:]]*mcastaddr:[[:space:]]*\).*/\1'$mcastaddr'/' \
-			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
-			/etc/corosync/corosync.conf.example > $tmp_conf
-	else
-		# Fallback to known sane config (defaults from SLE HA 11 SP1
-		# corosync.conf.example.patch)
+# for now, use our inline corosync.conf to force quorum expected_votes...
+#	if grep -q -s '^[[:space:]]*name:[[:space:]]*pacemaker' ${COROSYNC_CONF}.example; then
+#		# "name: pacemaker" in corosync example conf is our assumption
+#		# that the example is sane, so use it:
+#		sed \
+#			-e 's/^\([[:space:]]*bindnetaddr:[[:space:]]*\).*/\1'$bindnetaddr'/' \
+#			-e 's/^\([[:space:]]*mcastaddr:[[:space:]]*\).*/\1'$mcastaddr'/' \
+#			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
+#			/etc/corosync/corosync.conf.example > $tmp_conf
+#	else
+#		# Fallback to known sane config (defaults from SLE HA 11 SP1
+#		# corosync.conf.example.patch)
 		cat > $tmp_conf <<END
 # Please read the corosync.conf.5 manual page
-compatibility: whitetank
-aisexec {
-	group:		root
-	user:		root
-}
+
 service {
-	ver:		0
+	ver:		1
 	name:		pacemaker
-	use_mgmtd:	yes
-	use_logd:	yes
 }
 totem {
 	version:	2
-	token:		5000
-	token_retransmits_before_loss_const: 10
-	join:		60
-	consensus:	6000
-	vsftype:	none
-	max_messages:	20
-	clear_node_high_bit: yes
-	secauth:	off
-	threads:	0
+
+# Following are old corosync 1.4.x defaults from SLES
+#	token:		5000
+#	token_retransmits_before_loss_const: 10
+#	join:		60
+#	consensus:	6000
+#	vsftype:	none
+#	max_messages:	20
+#	clear_node_high_bit: yes
+#	secauth:	off
+#	threads:	0
+
+	crypto_cipher:	none
+	crypto_hash:	none
+
 	interface {
 		ringnumber:	0
 		bindnetaddr:	$bindnetaddr
 		mcastaddr:	$mcastaddr
 		mcastport:	$mcastport
+		ttl:		1
 	}
 }
 logging {
 	fileline:	off
 	to_stderr:	no
-	to_logfile:	no
-	timestamp:	on
+	to_logfile:	yes
+	logfile:	/var/log/cluster/corosync.log
 	to_syslog:	yes
-	syslog_facility: daemon
 	debug:		off
-	timestamp:	off
+	timestamp:	on
+	logger_subsys {
+		subsys:	QUORUM
+		debug:	off
+	}
 }
-amf {
-	mode:	disable
+quorum {
+	# Enable and configure quorum subsystem (default: off)
+	# see also corosync.conf.5 and votequorum.5
+	provider: corosync_votequorum
+	expected_votes: 1
 }
 END
-	fi
+#	fi
 	install_tmp $tmp_conf $COROSYNC_CONF
 	invoke csync2 -xv $COROSYNC_CONF
 }
