@@ -56,7 +56,7 @@ join_ssh()
 {
 	[ -n "$SEED_HOST" ] || error "No existing IP/hostname specified (use -c option)"
 
-	start_service sshd
+	start_service sshd.service
 
 	invoke mkdir -m 700 -p /root/.ssh
 
@@ -103,14 +103,7 @@ join_csync2()
 		/etc/csync2 \
 		|| error "Can't retrieve csync2 config from $SEED_HOST"
 
-	# Can't use start_service for csync2, because it runs inside xinetd
-	status "Enabling csync2 service"
-	invoke chkconfig csync2 on
-	# silently reload xinetd (without this, if xinetd is already running,
-	# it won't realize csync2 is meant to be active, and init/join won't
-	# work - bnc#774688)
-	rcxinetd reload >/dev/null 2>&1
-	start_service xinetd
+	start_service csync2.socket
 
 	# Sync csync2.cfg out to all hosts (else hosts other than the seed and
 	# the joining host won't have the joining host in their config yet).
@@ -210,10 +203,9 @@ if [ "$1" == "ssh_test" ]; then
 fi
 
 if [ "$1" != "ssh" -a "$1" != "csync2" -a "$1" != "ssh_merge" ]; then
-	rcopenais status >/dev/null
+	systemctl -q is-active corosync.service
 	rc=$?
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
-	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
 # Need hostname resolution to work, want NTP

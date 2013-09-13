@@ -78,7 +78,7 @@ END
 
 init_ssh()
 {
-	start_service sshd
+	start_service sshd.service
 
 	invoke mkdir -m 700 -p /root/.ssh
 
@@ -139,14 +139,7 @@ group ha_group
 END
 	install_tmp $tmp_conf $CSYNC2_CFG
 
-	# Can't use start_service for csync2, because it runs inside xinetd
-	status "Enabling csync2 service"
-	invoke chkconfig csync2 on
-	# silently reload xinetd (without this, if xinetd is already running,
-	# it won't realize csync2 is meant to be active, and init/join won't
-	# work - bnc#774688)
-	rcxinetd reload >/dev/null 2>&1
-	start_service xinetd
+	start_service csync2.socket
 
 	status "csync2 checking files"
 	invoke csync2 -cr /
@@ -600,13 +593,12 @@ stage=$1 ; shift
 # vgfs stage requires running cluster, everything else requires inactive cluster,
 # except ssh and csync2 (which don't care) and csync2_remote (which mustn't care,
 # just in case this breaks ha-cluster-join on another node).
-rcopenais status >/dev/null
+systemctl -q is-active corosync.service
 rc=$?
 if [ "$stage" == "vgfs" ]; then
 	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
 elif [ "$stage" != "ssh" -a "$stage" != "csync2" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
-	[ $rc -ne 7 ] && error "rcopenais status returned unexpected status ($rc)"
 fi
 
 # Need hostname resolution to work, want NTP (but don't block csync2_remote)

@@ -63,10 +63,8 @@ remove_ssh()
 {
 	[ -n "$SEED_HOST" ] || error "No existing IP/hostname specified (use -c option)"
 
-	start_service sshd
-
-	#check whether the openais service has been started on local node
-	invoke rcopenais status >/dev/null
+	#check whether corosync has been started on local node
+	systemctl -q is-active corosync.service
 	local rc=$?
 	[ $rc -ne 0 ] && error "Cluster is not active - can't execute removing action"
 
@@ -141,9 +139,8 @@ remove_cluster()
 	if [ $HOST_STATUS -ne 0 ]; then
 		status "Stopping the openais service"
 	
-		#invoke ssh root@$SEED_HOST "rcopenais stop && rm /etc/corosync/corosync.conf " \
-		invoke ssh root@$HOST "rcopenais stop" \
-      		|| error "stop the service rcopenais on $SEED_HOST failed"
+		invoke ssh root@$HOST "systemctl stop corosync" \
+			|| error "stop the service corosync on $SEED_HOST failed"
 
 		#delete the configure file from the node $SEED_HOST
 		invoke ssh root@$HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \

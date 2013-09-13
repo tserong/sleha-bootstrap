@@ -82,20 +82,20 @@ invoke()
 
 start_service()
 {
-	status "Enabling $1 service"
+	status "Enabling $1"
 
-	invoke chkconfig $1 on
-	rc$1 status >/dev/null
+	invoke systemctl enable $1
+	systemctl -q is-active $1
 	if [ $? -ne 0 ]; then
-		invoke rc$1 start 2>/dev/null
-		[ $? -ne 0 ] && error "Failed to start $1 service"
+		invoke systemctl start $1 2>/dev/null
+		[ $? -ne 0 ] && error "Failed to start $1"
 	fi
 }
 
-# Determines if a service is chkconfig'd on (not if it's actually running)
+# Determines if a service is enabled (not if it's actually running)
 service_is_on()
 {
-	chkconfig $1 | egrep -q "$1[[:space:]]+on"
+	systemctl is-enabled $1 >/dev/null 2>&1
 }
 
 status()
@@ -188,8 +188,8 @@ wait_for_cluster()
 init_cluster_local()
 {
 	# Caller should check this, but I'm paranoid...
-	rcopenais status >/dev/null
-	[ $rc -ne 7 ] && error "openais service is not stopped!"
+	systemctl -q is-active corosync.service
+	[ $? -eq 0 ] && error "corosync service is running!"
 
 	# reset password, but only if it's not already set
 	local ps=$(passwd -S hacluster 2>/dev/null | cut -d' ' -f2)
@@ -207,7 +207,7 @@ EOF
 	# evil, but necessary
 	invoke rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*
 
-	start_service hawk
+	start_service hawk.service
 	status "  HA Web Konsole is now running, to see cluster status go to:"
 	[ -n "$IP_ADDRESS" ] && status "    https://$IP_ADDRESS:7630/" \
 		|| status "    https://SERVER:7630/"
@@ -216,7 +216,7 @@ EOF
 	[ -n "$pass_msg" ] && \
 		warn "You should change the hacluster password to something more secure!"
 
-	start_service openais
+	start_service pacemaker.service
 	wait_for_cluster
 }
 
@@ -384,7 +384,7 @@ check_prereqs()
 		warned=1
 	fi
 
-	if ! service_is_on ntp ; then
+	if ! service_is_on ntp.service ; then
 		warn "NTP is not configured to start at system boot."
 		warned=1
 	fi
