@@ -80,7 +80,7 @@ join_csync2()
 	status "Configuring csync2"
 
 	# Necessary if re-running join on a node that's been configured before.
-	invoke rm -f /var/lib/csync2/$(hostname).db
+	invoke rm -f /var/lib/csync2/$(hostname).db3
 
 	# Not automatically updating /etc/hosts - risky in the general case.
 	#etc_hosts_add_me
