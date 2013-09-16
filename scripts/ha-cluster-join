@@ -171,8 +171,8 @@ join_cluster()
 	fi
 
 	# Bump expected_votes in corosync.conf
-	# TODO(must): this is rather fragile...
-	# TODO(must): this will probably result in a broken cluster, as existing
+	# TODO(must): this is rather fragile (see related code in ha-cluster-remove)
+	# TODO(must): this may result in a broken cluster, as existing
 	#             nodes won't reload their corosync conf (need to trigger
 	#             `corosync-quorumtool -e` or similar via csync2 action)
 	local tmp_conf=${COROSYNC_CONF}.$$
