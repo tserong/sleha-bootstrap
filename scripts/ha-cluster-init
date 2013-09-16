@@ -132,7 +132,6 @@ group ha_group
 	include /etc/lvm/lvm.conf;
 	include /etc/multipath.conf;
 	include /etc/samba/smb.conf;
-	include /etc/sysconfig/openais;
 	include /etc/sysconfig/pacemaker;
 	include /etc/sysconfig/sbd;
 }
