@@ -137,7 +137,7 @@ remove_get_hostname()
 remove_cluster()
 {
 	if [ $HOST_STATUS -ne 0 ]; then
-		status "Stopping the openais service"
+		status "Stopping the corosync service"
 	
 		invoke ssh root@$HOST "systemctl stop corosync" \
 			|| error "stop the service corosync on $SEED_HOST failed"
