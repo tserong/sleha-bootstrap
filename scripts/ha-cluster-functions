@@ -119,7 +119,7 @@ status_done()
 probe_partitions()
 {
 	status_long "Probing for new partitions..."
-	invoke partprobe || error "Failed to probe new partitions"
+	invoke partprobe || warn "Failed to probe new partitions"
 	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
 	invoke sleep 5
 	status_done
