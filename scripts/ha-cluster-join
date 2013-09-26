@@ -172,9 +172,6 @@ join_cluster()
 
 	# Bump expected_votes in corosync.conf
 	# TODO(must): this is rather fragile (see related code in ha-cluster-remove)
-	# TODO(must): this may result in a broken cluster, as existing
-	#             nodes won't reload their corosync conf (need to trigger
-	#             `corosync-quorumtool -e` or similar via csync2 action)
 	local tmp_conf=${COROSYNC_CONF}.$$
 	local new_quorum=$(awk -F[^0-9] '/^[[:space:]]*expected_votes/ { print $NF + 1 };' $COROSYNC_CONF)
 	sed \
@@ -185,6 +182,9 @@ join_cluster()
 
 	# ...now that that's out of the way, let's initialize the cluster.
 	init_cluster_local
+
+        # Trigger corosync config reload to ensure expected_votes is propagated
+	invoke corosync-cfgtool -R
 }
 
 #------------------------------------------------------------------------------
