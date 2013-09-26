@@ -505,8 +505,8 @@ END
 }
 
 # Non-generic, i.e. not for use with every type of cluster you can imagine:
-# creates specific cluster config (TODO: would be nice to template this in
-# future somehow)
+# creates specific cluster config (TODO: would be nice to just directly
+# use Hawk's wizard template instead of including config directly here)
 init_vgfs()
 {
 	[ -b "$OCFS2_DEVICE" ] || error "OCFS2 device $OCFS2_DEVICE does not exist"
@@ -515,64 +515,54 @@ init_vgfs()
 	local tmp_conf=/tmp/crm.$$
 	cat > $tmp_conf <<END
 primitive dlm ocf:pacemaker:controld \\
-	op start timeout="90" op stop timeout="100"
-primitive clvm ocf:lvm2:clvmd \\
-	op start timeout="90" op stop timeout="100"
-primitive cmirror ocf:lvm2:cmirrord \\
-	op start timeout="90" op stop timeout="100"
+	op start timeout="90" op stop timeout="100" \\
+	op monitor interval="60" timeout="60"
 primitive o2cb ocf:ocfs2:o2cb \\
-	op start timeout="90" op stop timeout="100"
-primitive vg ocf:heartbeat:LVM params volgrpname="clustervg" \\
-	op start timeout="30" op stop timeout="30" \\
-	meta target-role="Stopped"
-primitive filesys ocf:heartbeat:Filesystem \\
-	params directory="/clusterfs" fstype="ocfs2" device="/dev/clustervg/clusterlv" \\
+	op start timeout="90" op stop timeout="100" \\
+	op monitor interval="60" timeout="60"
+primitive clusterfs ocf:heartbeat:Filesystem \\
+	params directory="/srv/clusterfs" fstype="ocfs2" device="$OCFS2_DEVICE" \\
 	op monitor interval="20" timeout="40" \\
-	op start timeout="60" op stop timeout="60"
-group clusterfs dlm clvm o2cb cmirror vg filesys
+	op start timeout="60" op stop timeout="60" \\
+	meta target-role="Stopped"
+group base-group dlm o2cb
+clone base-clone base-group meta interleave="true"
 clone c-clusterfs clusterfs meta interleave="true"
+order base-then-clusterfs inf: base-clone c-clusterfs
+colocation clusterfs-with-base inf: c-clusterfs base-clone
 END
 	crm_configure_load update $tmp_conf
 
 	wait_for_resource "Waiting for O2CB" o2cb:0
-	wait_for_stop "Making sure VG is not active" vg:0
+	wait_for_stop "Making sure filesystem is not active" clusterfs:0
 
-	if pvdisplay $OCFS2_DEVICE >/dev/null 2>&1; then
-		if ! confirm "Existing Physical Volume found on $OCFS2_DEVICE - destroy?"; then
-			invoke crm resource stop c-clusterfs
-			wait_for_stop "Waiting for resource to stop" c-clusterfs
+	if blkid $OCFS2_DEVICE 2>/dev/null | grep -q TYPE; then
+		if ! confirm "Exiting filesystem found on $OCFS2_DEVICE - destroy?"; then
+			for res in base-clone c-clusterfs ; do
+				invoke crm resource stop $res
+				wait_for_stop "Waiting for resource to stop" $res
+			done
 			invoke crm configure delete \
-				dlm clvm cmirror o2cb vg filesys \
-				clusterfs c-clusterfs
+				dlm o2cb clusterfs \
+				base-group base-clone c-clusterfs \
+				base-then-clusterfs clusterfs-with-base
 			return
 		fi
 	fi
-
-	status_long "Creating LVM Volume"
-	# -ff forces create if something already exists
-	# (dangerous, but you asked for it...)
-	invoke pvcreate -ff -y $OCFS2_DEVICE || error "Failed to create physical volume on $OCFS2_DEVICE"
-	local pvdev=$(pvdisplay $OCFS2_DEVICE | awk '/PV Name/ { print $3; }')
-	[ -z "$pvdev" ] && error "Can't determine PV Name on $OCFS2_DEVICE"
-	invoke vgcreate --clustered y clustervg $pvdev || error "Failed to create VG on $pvdev"
-	invoke lvcreate --name clusterlv --extents 100%FREE clustervg || error "Failed to create LV on clustervg"
-	local lvdev=$(lvdisplay clustervg | awk '/LV Name/ { print $3; }')
-	[ -z "$lvdev" ] && error "Unable to determine LV Name for clustervg"
-	status_done
 
 	status_long "Creating OCFS2 filesystem"
 	# TODO: want "-T vmstore", but this'll only fly on >2GB partition
 	# Note: using undocumented '-x' switch to avoid prompting if overwriting
 	# existing partition.  For the commit that introduced this, see:
 	# http://oss.oracle.com/git/?p=ocfs2-tools.git;a=commit;h=8345a068479196172190f4fa287052800fa2b66f
-	invoke mkfs.ocfs2 -x $lvdev || error "Failed to create OCFS2 filesystem on $lvdev"
+	invoke mkfs.ocfs2 -x $OCFS2_DEVICE || error "Failed to create OCFS2 filesystem on $OCFS2_DEVICE"
 	status_done
 
 	# TODO: refactor, maybe
-	invoke mkdir -p /clusterfs || error "Can't create mountpoint /clusterfs"
-	invoke crm resource meta vg delete target-role \
+	invoke mkdir -p /srv/clusterfs || error "Can't create mountpoint /srv/clusterfs"
+	invoke crm resource meta clusterfs delete target-role \
 		|| error "Can't start cluster filesystem clone"
-	wait_for_resource "Waiting for /clusterfs to be mounted" filesys:0
+	wait_for_resource "Waiting for /srv/clusterfs to be mounted" clusterfs:0
 }
 
 #------------------------------------------------------------------------------
