@@ -178,7 +178,7 @@ init_firewall()
 wait_for_cluster()
 {
 	status_long "Waiting for cluster"
-	while ! crm_mon -1 | grep -qi online; do
+	while ! crm_mon -1 2>/dev/null | grep -qi online; do
 		$BE_QUIET || echo -n "."
 		sleep 5
 	done
