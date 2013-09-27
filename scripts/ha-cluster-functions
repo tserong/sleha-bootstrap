@@ -130,6 +130,8 @@ probe_partitions()
 # on, warn the user that they'll need to configure things manually (the
 # assumption here is that yast2-cluster is generally also installed, so that
 # file should be present, and should be formatted reasonably sensibly).
+# TODO(should): Create /etc/sysconfig/SuSEfirewall2.d/services/cluster
+# as yast2-cluster isn't present on openSUSE 13.1
 init_firewall()
 {
 	# ports for csync2, mgmtd, hawk & dlm respectively
