@@ -423,12 +423,12 @@ init_network()
 	if [ -z "$IP_ADDRESS" ]; then
 		IP_ADDRESS=$(ip -o -f inet addr show primary | \
 			awk "/[[:space:]]${NET_IF}[[:space:]]/ {print \$4} " |
-			sed 's/\/[1-9][1-9]*//')
+			sed 's/\/[0-9]\+//')
 	fi
 	if [ -z "$IP_NETWORK" -a -n "$IP_ADDRESS" ]; then
 		IP_NETWORK=$(ip route list | \
 			awk "/${IP_ADDRESS}/ { print \$1; }" |
-			sed 's/\/[1-9][1-9]//')
+			sed 's/\/[0-9]\+//')
 	fi
 
 	[ -z "$IP_ADDRESS" ] && \
