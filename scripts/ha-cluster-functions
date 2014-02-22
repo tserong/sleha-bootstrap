@@ -36,7 +36,7 @@ declare -r SYSCONFIG_FW_CLUSTER=/etc/sysconfig/SuSEfirewall2.d/services/cluster
 
 declare BE_QUIET=false
 declare YES_TO_ALL=false
-declare NET_IF=eth0
+declare NET_IF="$(netstat -nr | grep '^0.0.0.0' | awk '{print ($(NF))}' 2>/dev/null)"
 declare IP_ADDRESS
 declare IP_NETWORK
 
