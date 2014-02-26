@@ -125,6 +125,14 @@ probe_partitions()
 	status_done
 }
 
+# Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
+# (deliberately run in a subshell so as to not pollute global namespace)
+configured_sbd_device()
+(
+	[ -f "$SYSCONFIG_SBD" ] && . $SYSCONFIG_SBD
+	echo $SBD_DEVICE
+)
+
 # Configure /etc/sysconfig/SuSEfirewall2.d/services/cluster in much the same
 # way as yast2-cluster does.  If that file doesn't exist but the firewall is
 # on, warn the user that they'll need to configure things manually (the
@@ -218,8 +226,10 @@ EOF
 	[ -n "$pass_msg" ] && \
 		warn "You should change the hacluster password to something more secure!"
 
-	if [ -f "$SYSCONFIG_SBD" ] && grep -q '^SBD_DEVICE=' $SYSCONFIG_SBD; then
+	if [ -n "$(configured_sbd_device)" ]; then
 		invoke systemctl enable sbd.service
+	else
+		invoke systemctl disable sbd.service
 	fi
 	start_service pacemaker.service
 	wait_for_cluster
