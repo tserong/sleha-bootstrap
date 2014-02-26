@@ -236,10 +236,6 @@ Configure Corosync:
 		cat > $tmp_conf <<END
 # Please read the corosync.conf.5 manual page
 
-service {
-	ver:		1
-	name:		pacemaker
-}
 totem {
 	version:	2
 	secauth:	off
