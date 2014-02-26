@@ -269,7 +269,7 @@ totem {
 logging {
 	fileline:	off
 	to_stderr:	no
-	to_logfile:	yes
+	to_logfile:	no
 	logfile:	/var/log/cluster/corosync.log
 	to_syslog:	yes
 	debug:		off
