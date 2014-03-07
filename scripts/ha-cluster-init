@@ -284,6 +284,8 @@ quorum {
 END
 #	fi
 	install_tmp $tmp_conf $COROSYNC_CONF
+	invoke csync2 -m $COROSYNC_CONF
+	invoke csync2 -f $COROSYNC_CONF
 	invoke csync2 -xv $COROSYNC_CONF
 }
 
@@ -422,6 +424,8 @@ Configure SBD:
 				local tmp_conf=$SYSCONFIG_SBD.$$
 				sed -e 's/^\([^#].*\)$/#\1/g' $SYSCONFIG_SBD > $tmp_conf
 				install_tmp $tmp_conf $SYSCONFIG_SBD
+				invoke csync2 -m $SYSCONFIG_SBD
+				invoke csync2 -f $SYSCONFIG_SBD
 				invoke csync2 -xv $SYSCONFIG_SBD
 			fi
 			return
@@ -456,6 +460,8 @@ SBD_DEVICE="$SBD_DEVICE"
 SBD_OPTS="-W"
 END
 	install_tmp $tmp_conf $SYSCONFIG_SBD
+	invoke csync2 -m $SYSCONFIG_SBD
+	invoke csync2 -f $SYSCONFIG_SBD
 	invoke csync2 -xv $SYSCONFIG_SBD
 }
 

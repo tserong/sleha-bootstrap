@@ -181,6 +181,8 @@ remove_cluster()
 		-e 's/^\([[:space:]]*expected_votes:[[:space:]]*\).*/\1'$new_quorum'/' \
 		$COROSYNC_CONF > $tmp_conf
 	install_tmp $tmp_conf $COROSYNC_CONF
+	invoke csync2 -m $COROSYNC_CONF
+	invoke csync2 -f $COROSYNC_CONF
 	invoke csync2 -xv $COROSYNC_CONF
 
 	# Trigger corosync config reload to ensure expected_votes is propagated
