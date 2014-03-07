@@ -105,16 +105,16 @@ join_csync2()
 
 	start_service csync2.socket
 
-	# Sync csync2.cfg out to all hosts (else hosts other than the seed and
-	# the joining host won't have the joining host in their config yet).
-	invoke ssh root@$SEED_HOST "csync2 -m $CSYNC2_CFG ; csync2 -f $CSYNC2_CFG ; csync2 -xv $CSYNC2_CFG" \
-		|| warn "csync2 of $CSYNC2_CFG failed - file may not be in sync on all nodes"
-
-	# Sync everything else to the joining node only
-	# -mr marks all as dirty
-	# -fr forces all in sync
-	# -P syncs only to one host
-	invoke ssh root@$SEED_HOST "csync2 -mr / ; csync2 -fr / ; csync2 -xv -P $(hostname)" \
+	# Sync new config out.  This goes to all hosts; csync2.cfg definitely
+	# needs to go to all hosts (else hosts other than the seed and the
+	# joining host won't have the joining host in their config yet).
+	# Strictly, the rest of the files need only go to the new host which
+	# could theoretically be effected using `csync2 -xv -P $(hostname)`,
+	# but this still leaves all the other files in dirty state (becuase
+	# they haven't gone to all nodes in the cluster, which means a
+	# subseqent join of another node can fail its sync of corosync.conf
+	# when it updates expected_votes.  Grrr...
+	invoke ssh root@$SEED_HOST "csync2 -mr / ; csync2 -fr / ; csync2 -xv" \
 		|| warn "csync2 run failed - some files may not be sync'd"
 }
 
