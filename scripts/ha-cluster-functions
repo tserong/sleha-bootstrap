@@ -404,6 +404,12 @@ check_prereqs()
 		warned=1
 	fi
 
+	if ! [ -c /dev/watchdog ] ; then
+		warn "There does not appear to be a watchdog device.  If you use"
+		warn "SBD the cluster will be unable to start without a watchdog."
+		warned=1
+	fi
+
 	if [ $warned -ne 0 ]; then
 		confirm 'Do you want to continue anyway?' || exit
 	fi
