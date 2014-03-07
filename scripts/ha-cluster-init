@@ -280,6 +280,7 @@ quorum {
 	# see also corosync.conf.5 and votequorum.5
 	provider: corosync_votequorum
 	expected_votes: 1
+	two_node: 0
 }
 END
 #	fi

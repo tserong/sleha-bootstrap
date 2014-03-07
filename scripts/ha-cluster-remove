@@ -177,8 +177,11 @@ remove_cluster()
 	# TODO(must): this is rather fragile (see related code in ha-cluster-join)
 	local tmp_conf=${COROSYNC_CONF}.$$
 	local new_quorum=$(awk -F[^0-9] '/^[[:space:]]*expected_votes/ { print $NF - 1 };' $COROSYNC_CONF)
+	local two_node=0
+	[ $new_quorum -eq 2 ] && two_node=1
 	sed \
 		-e 's/^\([[:space:]]*expected_votes:[[:space:]]*\).*/\1'$new_quorum'/' \
+		-e 's/^\([[:space:]]*two_node:[[:space:]]*\).*/\1'$two_node'/' \
 		$COROSYNC_CONF > $tmp_conf
 	install_tmp $tmp_conf $COROSYNC_CONF
 	invoke csync2 -m $COROSYNC_CONF
