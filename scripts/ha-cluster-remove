@@ -168,8 +168,10 @@ remove_cluster()
 		|| error "remove the node $SEED_HOST from file $CSYNC2_CFG failed"
 
 	status "Propagating the files across the surviving nodes"
-	#csync the file to all the node
-	invoke csync2 -f $CSYNC2_CFG && csync2 -xv >/dev/null 2>&1 || error "Propagate the file $CYNC2_CFG failed"
+	# csync the file to all the node
+	# `csync2 -R` is needed to remove old records from the database
+	# for the host that's now gone.
+	invoke csync2 -R && invoke csync2 -m $CSYNC2_CFG && invoke csync2 -f $CSYNC2_CFG && invoke csync2 -xv >/dev/null 2>&1 || error "Propagate the file $CYNC2_CFG failed"
 
 	# Decrement expected_votes in corosync.conf
 	# TODO(must): this is rather fragile (see related code in ha-cluster-join)
