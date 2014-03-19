@@ -145,19 +145,11 @@ init_firewall()
 	# ports for csync2, mgmtd, hawk & dlm respectively
 	local tcp="30865 5560 7630 21064"
 
-	# all mcastports defined in corosync config
-	local udp
-	if [ -f "$COROSYNC_CONF" ]; then
-		udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
-			${COROSYNC_CONF}))
-	fi
-
 	local -i fw_open=0
 	if [ -f "$SYSCONFIG_FW_CLUSTER" ]; then
 		local tmp_conf=${SYSCONFIG_FW_CLUSTER}.$$
 		sed \
 			-e "s/^TCP=.*/TCP=\"$tcp\"/" \
-			-e "s/^UDP=.*/UDP=\"$udp\"/" \
 			$SYSCONFIG_FW_CLUSTER > $tmp_conf
 		install_tmp $tmp_conf $SYSCONFIG_FW_CLUSTER
 
@@ -176,12 +168,48 @@ init_firewall()
 
 	# Firewall is active, either restart or complain if we couldn't tweak it
 	if [ $fw_open -eq 1 ]; then
-		status "Restarting firewall (TCP $tcp and UDP ${udp:-none} open)"
+		status "Restarting firewall (TCP $tcp open)"
 		invoke rcSuSEfirewall2 restart \
 			|| error "Failed to restart firewall"
 	else
 		warn "Firewall is active - you may need to open ports:"
-		warn "	TCP $tcp and UDP ${udp:-none}"
+		warn "	TCP $tcp"
+	fi
+}
+
+# Have to do this separately, as we need general firewall config early
+# so csync2 works, but need corosync config *after* corosync.conf has
+# been created/updated.
+init_firewall_corosync()
+{
+	# all mcastports defined in corosync config
+	local udp
+	if [ -f "$COROSYNC_CONF" ]; then
+		udp=$(echo $(awk -F: '/^[[:space:]]*mcastport:/ {print $2}' \
+			${COROSYNC_CONF}))
+	fi
+
+	local -i fw_open=0
+	if [ -f "$SYSCONFIG_FW_CLUSTER" ]; then
+		local tmp_conf=${SYSCONFIG_FW_CLUSTER}.$$
+		sed \
+			-e "s/^UDP=.*/UDP=\"$udp\"/" \
+			$SYSCONFIG_FW_CLUSTER > $tmp_conf
+		install_tmp $tmp_conf $SYSCONFIG_FW_CLUSTER
+		fw_open=1
+	fi
+
+	# No need to do anything else if the firewall is inactive
+	rcSuSEfirewall2 status >/dev/null 2>&1 || return
+
+	# Firewall is active, either restart or complain if we couldn't tweak it
+	if [ $fw_open -eq 1 ]; then
+		status "Restarting firewall (UDP ${udp:-none} open)"
+		invoke rcSuSEfirewall2 restart \
+			|| error "Failed to restart firewall"
+	else
+		warn "Firewall is active - you may need to open ports:"
+		warn "	UDP ${udp:-none}"
 	fi
 }
 
@@ -200,6 +228,8 @@ init_cluster_local()
 	# Caller should check this, but I'm paranoid...
 	systemctl -q is-active corosync.service
 	[ $? -eq 0 ] && error "corosync service is running!"
+
+	init_firewall_corosync
 
 	# reset password, but only if it's not already set
 	local ps=$(passwd -S hacluster 2>/dev/null | cut -d' ' -f2)
