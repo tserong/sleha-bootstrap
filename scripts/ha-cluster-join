@@ -190,6 +190,11 @@ join_cluster()
 
         # Trigger corosync config reload to ensure expected_votes is propagated
 	invoke corosync-cfgtool -R
+
+	# Ditch no-quorum-policy=ignore if we're going over two nodes
+	if [ $new_quorum -gt 2 ] && crm configure show | grep -q no-quorum-policy=ignore ; then
+		invoke crm_attribute --attr-name no-quorum-policy --delete-attr
+	fi
 }
 
 #------------------------------------------------------------------------------

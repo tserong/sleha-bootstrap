@@ -31,7 +31,6 @@ These may be in purview of ha-cluster-bootstrap, or may be in appliance image:
 == STONITH Config ==
 
 * See https://bugzilla.novell.com/show_bug.cgi?id=722405 for stonith timeout suggestions
-* Drop no-quorum-policy=ignore when > 2 nodes.
 
 
 == Template Mode ==
