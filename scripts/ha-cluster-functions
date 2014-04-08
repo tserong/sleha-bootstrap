@@ -164,7 +164,7 @@ init_firewall()
 	fi
 
 	# No need to do anything else if the firewall is inactive
-	systemctl -q is-active SuSEfirewall2 || return
+	SuSEfirewall2 status > /dev/null 2>&1 || return
 
 	# Firewall is active, either restart or complain if we couldn't tweak it
 	if [ $fw_open -eq 1 ]; then
@@ -200,7 +200,7 @@ init_firewall_corosync()
 	fi
 
 	# No need to do anything else if the firewall is inactive
-	systemctl -q is-active SuSEfirewall2 || return
+	SuSEfirewall2 status > /dev/null 2>&1 || return
 
 	# Firewall is active, either restart or complain if we couldn't tweak it
 	if [ $fw_open -eq 1 ]; then
