@@ -501,7 +501,7 @@ END
 		# stonith-enabled, or it wipes out then entire
 		# cib-bootstrap-options section
 		# TODO: find out if this is a bug in the crm shell
-		invoke crm configure primitive stonith-sbd stonith:external/sbd params sbd_device="$sbd_device" \
+		invoke crm configure primitive stonith-sbd stonith:external/sbd \
 			|| error "Can't create stonith-sbd primitive"
 		invoke crm configure property stonith-enabled="true" \
 			|| error "Can't enable STONITH"
