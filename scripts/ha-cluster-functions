@@ -429,7 +429,12 @@ check_prereqs()
 		warned=1
 	fi
 
-	if ! service_is_on ntp.service ; then
+	local ntpd="ntp.service"
+	if systemctl list-unit-files | grep -q ntpd.service ; then
+		ntpd="ntpd.service"
+	fi
+
+	if ! service_is_on $ntpd ; then
 		warn "NTP is not configured to start at system boot."
 		warned=1
 	fi
