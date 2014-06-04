@@ -157,6 +157,8 @@ join_ssh_merge()
 
 join_cluster()
 {
+	local -i new_quorum=0
+
 	# Need to do this if second (or subsequent) node happens to be up and
 	# connected to storage while it's being repartitioned on the first node.
 	probe_partitions
@@ -173,12 +175,19 @@ join_cluster()
 		for m in $mtpts; do
 			invoke mkdir -p $m
 		done
+		new_quorum=$(ssh root@$SEED_HOST 'cibadmin -Q --xpath '\''//crm_config//nvpair[@name="expected-quorum-votes"]'\''| sed '\''s/.*value="\([^"]*\)".*/\1/'\''')
+		let new_quorum=$new_quorum+1
 	else
 		status "No existing IP/hostname specified - skipping mountpoint detection/creation"
 	fi
 
 	# ...now that that's out of the way, let's initialize the cluster.
 	init_cluster_local
+
+	# Ditch no-quorum-policy=ignore if we're going over two nodes
+	if [ $new_quorum -gt 2 ] && crm configure show | grep -q 'no-quorum-policy=.*ignore' ; then
+		invoke crm_attribute --attr-name no-quorum-policy --delete-attr
+	fi
 }
 
 #------------------------------------------------------------------------------
