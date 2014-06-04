@@ -125,6 +125,14 @@ probe_partitions()
 	status_done
 }
 
+# Gets currently configured SBD device, i.e. what's in /etc/sysconfig/sbd
+# (deliberately run in a subshell so as to not pollute global namespace)
+configured_sbd_device()
+(
+	[ -f "$SYSCONFIG_SBD" ] && . $SYSCONFIG_SBD
+	echo $SBD_DEVICE
+)
+
 # Configure /etc/sysconfig/SuSEfirewall2.d/services/cluster in much the same
 # way as yast2-cluster does.  If that file doesn't exist but the firewall is
 # on, warn the user that they'll need to configure things manually (the

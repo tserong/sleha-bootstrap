@@ -413,7 +413,7 @@ Configure SBD:
   specify here will be destroyed.
 "
 
-		if [ -f "$SYSCONFIG_SBD" ] && grep -q '^SBD_DEVICE=' $SYSCONFIG_SBD; then
+		if [ -n "$(configured_sbd_device)" ]; then
 			confirm \
 				"SBD is already configured - overwrite?" || return
 		fi
