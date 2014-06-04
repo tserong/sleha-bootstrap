@@ -146,9 +146,9 @@ remove_cluster()
       		|| error "stop the service rcopenais on $SEED_HOST failed"
 
 		#delete the configure file from the node $SEED_HOST
-		invoke ssh root@$HOST "rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
+		invoke ssh root@$HOST "bash -c \"rm -f $SYSCONFIG_SBD $CSYNC2_CFG \
 				$COROSYNC_CONF $CSYNC2_KEY \
-				&& rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*" \
+				&& rm -f /var/lib/heartbeat/crm/* /var/lib/pacemaker/cib/*\"" \
 				|| error "Delete the configure files failed"
 	else
 		#check node status
