@@ -127,6 +127,7 @@ group ha_group
 	include /etc/csync2/csync2.cfg;
 	include /etc/csync2/key_hagroup;
 	include /etc/ctdb/nodes;
+	include /etc/drbd.conf;
 	include /etc/drbd.d;
 	include /etc/ha.d/ldirectord.cf;
 	include /etc/lvm/lvm.conf;
