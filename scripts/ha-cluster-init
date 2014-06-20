@@ -95,6 +95,17 @@ init_ssh()
 	append /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
 }
 
+# This handles the slightly obscure case where the seed node has ssh keys,
+# but those keys aren't present in the seed node's authorized_keys file.
+init_ssh_remote()
+{
+	for key in id_rsa id_dsa id_ecdsa id_ed25519 ; do
+		[ -f /root/.ssh/$key ] || continue
+		grep -q -s "$(cat /root/.ssh/$key.pub)" /root/.ssh/authorized_keys \
+			|| append /root/.ssh/$key.pub /root/.ssh/authorized_keys
+	done
+}
+
 init_csync2()
 {
 	status "Configuring csync2"
@@ -595,12 +606,12 @@ systemctl -q is-active corosync.service
 rc=$?
 if [ "$stage" == "vgfs" ]; then
 	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
-elif [ "$stage" != "ssh" -a "$stage" != "csync2" -a "$stage" != "csync2_remote" ]; then
+elif [ "$stage" != "ssh" -a "$stage" != "ssh_remote" -a "$stage" != "csync2" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 fi
 
-# Need hostname resolution to work, want NTP (but don't block csync2_remote)
-if [ "$stage" != "csync2_remote" ]; then
+# Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
+if [ "$stage" != "ssh_remote" -a "$stage" != "csync2_remote" ]; then
 	check_prereqs
 fi
 
@@ -611,7 +622,7 @@ ocfs2)	;;
 esac
 
 case $stage in
-ssh|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
+ssh|ssh_remote|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	init
 	# $2 == nasty hack to pick up IP arg to csync2_remote (not strictly
 	# necessary currently, as we're not auto-updating /etc/hosts)
