@@ -116,10 +116,22 @@ status_done()
 	echo "done"
 }
 
+abrev_probe (){
+	# This function uses fdisk to create a list of valid devices for probing
+	# with partprobe.  This prevents partprobe from failing on read-only mounted
+	# devices such as /dev/sr0 (etc) that might cause it to return an error when
+	# it exits.  This allows partprobe to run without forcing _die to bail out.
+	# -Brandon Heaton
+	#  ATT Training Engineer
+	#  Data Center Engineer
+	#  bheaton@suse.com
+	invoke partprobe $(fdisk -l 2>/dev/null|grep ^Disk\ \/|cut -d" " -f2|cut -d":" -f1|paste -s)
+}
+
 probe_partitions()
 {
 	status_long "Probing for new partitions..."
-	invoke partprobe || warn "Failed to probe new partitions"
+	abrev_probe
 	# ...somehow the new partitions don't always appear immediately?  Need to verify/fix
 	invoke sleep 5
 	status_done
