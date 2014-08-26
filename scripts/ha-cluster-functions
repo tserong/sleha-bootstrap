@@ -184,8 +184,7 @@ init_firewall()
 		invoke rcSuSEfirewall2 restart \
 			|| error "Failed to restart firewall"
 	else
-		warn "Firewall is active - you may need to open ports:"
-		warn "	TCP $tcp"
+		warn "Firewall is active. You may need to open these TCP ports: $tcp"
 	fi
 }
 
@@ -220,8 +219,7 @@ init_firewall_corosync()
 		invoke rcSuSEfirewall2 restart \
 			|| error "Failed to restart firewall"
 	else
-		warn "Firewall is active - you may need to open ports:"
-		warn "	UDP ${udp:-none}"
+		warn "Firewall is active. You may need to open these UDP ports: ${udp:-none}"
 	fi
 }
 
@@ -431,13 +429,22 @@ _onexit()
 	exit $rc
 }
 
+check_watchdog()
+{
+	watchdog_dev=$(cat /etc/modules-load.d/watchdog.conf 2>&1|grep watchdog-device |cut -d"=" -f2 >/dev/null 2>&1)
+	if [ -z "$watchdog_dev" ]; then
+		watchdog_dev="/dev/watchdog"
+	fi
+
+	wdctl $watchdog_dev >/dev/null 2>&1
+}
+
 check_prereqs()
 {
 	local -i warned=0
 
 	if ! my_hostname_resolves ; then
-		warn "Hostname '$(hostname)' is unresolvable - csync2 won't work."
-		warn "You should add an entry to /etc/hosts or configure DNS."
+		warn "Hostname '$(hostname)' is unresolvable - csync2 won't work. Please add an entry to /etc/hosts or configure DNS."
 		warned=1
 	fi
 
@@ -451,9 +458,8 @@ check_prereqs()
 		warned=1
 	fi
 
-	if ! [ -c /dev/watchdog ] ; then
-		warn "There does not appear to be a watchdog device.  If you use"
-		warn "SBD the cluster will be unable to start without a watchdog."
+	if ! check_watchdog ; then
+		warn "No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog."
 		warned=1
 	fi
 
