@@ -456,6 +456,11 @@ Configure SBD:
 			fi
 		done
 		SBD_DEVICE="$dev"
+
+		SBD_WATCHDOG="yes"
+		if ! check_watchdog; then
+			warn "No watchdog device detected! SBD will not work without a watchdog."
+		fi
 	fi
 
 	[ -b "$SBD_DEVICE" ] || error "SBD device $SBD_DEVICE does not exist"
@@ -467,12 +472,22 @@ Configure SBD:
 	invoke sbd -d $SBD_DEVICE create || error "Failed to initialize SBD device"
 	status_done
 
-	local tmp_conf=$SYSCONFIG_SBD.$$
-	cat > $tmp_conf <<END
-SBD_DEVICE="$SBD_DEVICE"
-SBD_OPTS="-W"
-END
-	install_tmp $tmp_conf $SYSCONFIG_SBD
+	if [ -f $SYSCONFIG_SBD ]; then
+		if grep -E '^SBD_DEVICE=.*' $SYSCONFIG_SBD; then
+			sed -i -e "s%^SBD_DEVICE=.*%SBD_DEVICE=\"$SBD_DEVICE\"%g"  $SYSCONFIG_SBD
+		else
+			echo "SBD_DEVICE=\"$SBD_DEVICE\"" >> $SYSCONFIG_SBD
+		fi
+		if grep -E '^SBD_WATCHDOG=.*' $SYSCONFIG_SBD; then
+			sed -i -e "s/^SBD_WATCHDOG=.*/SBD_WATCHDOG=$SBD_WATCHDOG/g"  $SYSCONFIG_SBD
+		else
+			echo "SBD_WATCHDOG=\"$SBD_WATCHDOG\"" >> $SYSCONFIG_SBD
+		fi
+	else
+		echo "SBD_DEVICE=\"$SBD_DEVICE\"" > $SYSCONFIG_SBD
+		echo "SBD_WATCHDOG=\"$SBD_WATCHDOG\"" >> $SYSCONFIG_SBD
+	fi
+
 	invoke csync2 -m $SYSCONFIG_SBD
 	invoke csync2 -f $SYSCONFIG_SBD
 	invoke csync2 -xv $SYSCONFIG_SBD
