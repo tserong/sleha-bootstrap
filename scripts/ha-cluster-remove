@@ -228,6 +228,7 @@ done
 
 [ -n "$SEED_HOST" ] || _die "No existing IP/hostname specified (use -c option)"
 
+check_tty
 init
 remove_ssh
 remove_hostname_check

@@ -258,6 +258,7 @@ if [ "$1" != "ssh" -a "$1" != "csync2" -a "$1" != "ssh_merge" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 fi
 
+check_tty
 # Need hostname resolution to work, want NTP
 check_prereqs
 
