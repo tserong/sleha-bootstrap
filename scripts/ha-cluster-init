@@ -473,13 +473,13 @@ Configure SBD:
 	status_done
 
 	if [ -f $SYSCONFIG_SBD ]; then
-		if grep -E '^SBD_DEVICE=.*' $SYSCONFIG_SBD; then
+		if grep -E '^SBD_DEVICE=.*' $SYSCONFIG_SBD >/dev/null 2>&1; then
 			sed -i -e "s%^SBD_DEVICE=.*%SBD_DEVICE=\"$SBD_DEVICE\"%g"  $SYSCONFIG_SBD
 		else
 			echo "SBD_DEVICE=\"$SBD_DEVICE\"" >> $SYSCONFIG_SBD
 		fi
-		if grep -E '^SBD_WATCHDOG=.*' $SYSCONFIG_SBD; then
-			sed -i -e "s/^SBD_WATCHDOG=.*/SBD_WATCHDOG=$SBD_WATCHDOG/g"  $SYSCONFIG_SBD
+		if grep -E '^SBD_WATCHDOG=.*' $SYSCONFIG_SBD >/dev/null 2>&1; then
+			sed -i -e "s/^SBD_WATCHDOG=.*/SBD_WATCHDOG=\"$SBD_WATCHDOG\"/g"  $SYSCONFIG_SBD
 		else
 			echo "SBD_WATCHDOG=\"$SBD_WATCHDOG\"" >> $SYSCONFIG_SBD
 		fi
