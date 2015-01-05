@@ -470,6 +470,14 @@ check_prereqs()
 	init_firewall
 }
 
+check_tty()
+{
+	# Check for pseudo-tty: Cannot display read prompts without a TTY (bnc#892702)
+	if ! tty -s; then
+		error "No pseudo-tty detected! Use -t option to ssh if calling remotely."
+	fi
+}
+
 init()
 {
 	log_start
