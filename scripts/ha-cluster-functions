@@ -503,9 +503,7 @@ init_network()
 	# up. If $IP_ADDRESS is overridden, network detect shouldn't work,
 	# because "ip route" won't be able to help us.
 	if [ -z "$IP_ADDRESS" ]; then
-		IP_ADDRESS=$(ip -o -f inet addr show primary | \
-			awk "/[[:space:]]${NET_IF}[[:space:]]/ {print \$4} " |
-			sed 's/\/[0-9]\+//')
+		IP_ADDRESS=$(ip route get 1 oif $NET_IF | head -1 | awk '{print $NF}')
 	fi
 	if [ -z "$IP_NETWORK" -a -n "$IP_ADDRESS" ]; then
 		IP_NETWORK=$(ip route list | \
