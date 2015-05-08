@@ -674,7 +674,7 @@ fi
 # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
 if [ "$stage" != "ssh_remote" -a "$stage" != "csync2_remote" ]; then
 	check_tty
-	check_prereqs
+	check_prereqs "$stage"
 fi
 
 case $TEMPLATE in

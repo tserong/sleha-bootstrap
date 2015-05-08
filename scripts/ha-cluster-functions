@@ -458,9 +458,12 @@ check_prereqs()
 		warned=1
 	fi
 
-	if ! check_watchdog ; then
-		warn "No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog."
-		warned=1
+	local stage="$1"
+	if [ -z "$stage" -o "$stage" == "join" -o "$stage" == "sbd" ]; then
+		if ! check_watchdog ; then
+			warn "No watchdog device found. If SBD is used, the cluster will be unable to start without a watchdog."
+			warned=1
+		fi
 	fi
 
 	if [ $warned -ne 0 ]; then

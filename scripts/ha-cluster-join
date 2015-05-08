@@ -260,7 +260,7 @@ fi
 
 check_tty
 # Need hostname resolution to work, want NTP
-check_prereqs
+check_prereqs "join"
 
 case $1 in
 ssh|csync2|ssh_merge|cluster)
