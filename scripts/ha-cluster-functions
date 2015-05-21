@@ -472,6 +472,8 @@ check_prereqs()
 
 check_tty()
 {
+	$YES_TO_ALL && return 0
+
 	# Check for pseudo-tty: Cannot display read prompts without a TTY (bnc#892702)
 	if ! tty -s; then
 		error "No pseudo-tty detected! Use -t option to ssh if calling remotely."
