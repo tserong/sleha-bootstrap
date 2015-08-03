@@ -619,7 +619,7 @@ Configure Administration IP Address:
 		fi
 
 		adminaddr=$(prompt_for_string \
-						'Administration Virtual IP (e.g.: 192.168.1.200)' \
+						'Administration Virtual IP' \
 						'([0-9]+\.){3}[0-9]+' "")
 		[ -z "$adminaddr" ] && error 'No value for admin address'
 	else
