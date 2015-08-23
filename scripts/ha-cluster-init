@@ -30,6 +30,7 @@ declare SHARED_DEVICE
 declare SBD_DEVICE
 declare OCFS2_DEVICE
 declare TEMPLATE
+declare ADMIN_IP
 
 usage()
 {
@@ -53,6 +54,9 @@ Options for ocfs2 template:
                 "storage" stage)
     -o <dev>    Block device to use for OCFS2 (only used in "vgfs" stage)
 
+Options for administration IP template:
+    -A <ip>     IP address to use for the administration virtual IP
+
 Stage can be one of:
     ssh         Create SSH keys for passwordless SSH between cluster nodes
     csync2      Configure csync2
@@ -62,6 +66,7 @@ Stage can be one of:
     cluster     Bring the cluster online
     vgfs        Create volume group and filesystem (ocfs2 template only,
                 requires -o <dev>)
+    admin       Create administration virtual IP (optional)
 
 Note:
   - If stage is not specified, the script will run through each stage
@@ -592,12 +597,52 @@ END
 	wait_for_resource "Waiting for /srv/clusterfs to be mounted" clusterfs:0
 }
 
+init_admin()
+{
+	# Skip this section when -y is passed
+	# unless $ADMIN_IP is set
+	$YES_TO_ALL && [ -z $ADMIN_IP ] && return
+
+	local adminaddr
+
+	if [ -z $ADMIN_IP ]; then
+		status "
+Configure Administration IP Address:
+  Optionally configure an administration virtual IP
+  address. The purpose of this IP address is to
+  provide a single IP that can be used to interact
+  with the cluster, rather than using the IP address
+  of any specific cluster node.
+"
+		if ! confirm "Do you wish to configure an administration IP?"; then
+			return
+		fi
+
+		adminaddr=$(prompt_for_string \
+						'Administration Virtual IP' \
+						'([0-9]+\.){3}[0-9]+' "")
+		[ -z "$adminaddr" ] && error 'No value for admin address'
+	else
+		adminaddr="$ADMIN_IP"
+	fi
+
+	local tmp_conf=/tmp/crm.$$
+	cat > $tmp_conf <<END
+primitive admin_addr ocf:heartbeat:IPaddr2 \\
+	params ip="$adminaddr" \\
+	op monitor interval="10" timeout="20"
+END
+	crm_configure_load update $tmp_conf
+
+	wait_for_resource "Waiting for Admin Address" admin_addr
+}
+
 #------------------------------------------------------------------------------
 
 # for --help option
 [ "$1" == "--help" ] && usage
 
-while getopts 'hi:o:p:qs:t:y' o; do
+while getopts 'hi:o:p:qs:t:A:y' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
@@ -606,6 +651,7 @@ while getopts 'hi:o:p:qs:t:y' o; do
 	q) BE_QUIET=true;;
 	s) SBD_DEVICE=$OPTARG;;
 	t) TEMPLATE=$OPTARG;;
+	A) ADMIN_IP=$OPTARG;;
 	y) YES_TO_ALL=true;;
 	esac
 done
@@ -619,8 +665,8 @@ stage=$1 ; shift
 # just in case this breaks ha-cluster-join on another node).
 systemctl -q is-active corosync.service
 rc=$?
-if [ "$stage" == "vgfs" ]; then
-	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run vgfs stage"
+if [ "$stage" == "vgfs" -o "$stage" == "admin" ]; then
+	[ $rc -ne 0 ] && error "Cluster is inactive  - can't run $stage stage"
 elif [ "$stage" != "ssh" -a "$stage" != "ssh_remote" -a "$stage" != "csync2" -a "$stage" != "csync2_remote" ]; then
 	[ $rc -eq 0 ] && error "Cluster is currently active - can't run"
 fi
@@ -628,7 +674,7 @@ fi
 # Need hostname resolution to work, want NTP (but don't block ssh_remote or csync2_remote)
 if [ "$stage" != "ssh_remote" -a "$stage" != "csync2_remote" ]; then
 	check_tty
-	check_prereqs
+	check_prereqs "$stage"
 fi
 
 case $TEMPLATE in
@@ -638,7 +684,7 @@ ocfs2)	;;
 esac
 
 case $stage in
-ssh|ssh_remote|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
+ssh|ssh_remote|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs|admin)
 	init
 	# $2 == nasty hack to pick up IP arg to csync2_remote (not strictly
 	# necessary currently, as we're not auto-updating /etc/hosts)
@@ -655,6 +701,7 @@ ssh|ssh_remote|csync2|csync2_remote|corosync|storage|sbd|cluster|vgfs)
 	init_sbd
 	init_cluster
 	[ "$TEMPLATE" == "ocfs2" ] && init_vgfs
+	init_admin
 	;;
 *)	echo -e "Invalid stage ($1)\n"
 	usage
