@@ -137,7 +137,7 @@ group ha_group
 {
 	key /etc/csync2/key_hagroup;
 	host $(hostname);
-	include /etc/booth/booth.conf;
+	include /etc/booth;
 	include /etc/corosync/corosync.conf;
 	include /etc/corosync/authkey;
 	include /etc/csync2/csync2.cfg;
