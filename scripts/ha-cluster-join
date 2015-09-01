@@ -199,6 +199,10 @@ join_cluster()
 
 	# Bump expected_votes in corosync.conf
 	# TODO(must): this is rather fragile (see related code in ha-cluster-remove)
+
+	# If COROSYNC_CONF doesn't exist or is empty, we will fail here. (bsc#943227)
+	[ ! -s $COROSYNC_CONF ] && error "$COROSYNC_CONF is not readable. Please ensure that hostnames are resolvable."
+
 	local tmp_conf=${COROSYNC_CONF}.$$
 	local new_quorum=$(awk -F[^0-9] '/^[[:space:]]*expected_votes/ { print $NF + 1 };' $COROSYNC_CONF)
 	local two_node=0
