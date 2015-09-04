@@ -522,7 +522,7 @@ rsc_defaults \$id="rsc-options" \\
 	resource-stickiness="1" \\
 	migration-threshold="3"
 END
-	crm_configure_load replace $tmp_conf
+	crm_configure_load update $tmp_conf
 
 	# sbd fencing if applicable (getting local sbd_device here direct
 	# from SBD config, in case init_cluster is invoked on its own)
