@@ -1,3 +1,17 @@
 HA Cluster Bootstrap
+====================
 
-Tool to bootstrap a Pacemaker High Availability cluster in a hurry.
+Tools to bootstrap a Pacemaker High Availability cluster in a hurry.
+
+* ha-cluster-init
+  Installs and configures the first node in a new cluster.
+
+* ha-cluster-join
+  Installs and configures new nodes to join the cluster.
+
+* ha-cluster-remove
+  Removes a node from the cluster.
+
+NOTE: This tool is most likely to work best on a SUSE-based 
+distribution (SLE or openSUSE). Patches to make it cross-
+platform compatible are welcomed.
