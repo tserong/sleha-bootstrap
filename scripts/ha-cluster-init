@@ -31,6 +31,7 @@ declare SBD_DEVICE
 declare OCFS2_DEVICE
 declare TEMPLATE
 declare ADMIN_IP
+declare COROSYNC_UNICAST=false
 
 usage()
 {
@@ -48,6 +49,11 @@ Options:
 
     -t <name>   Optionally configure cluster with template 'name'
                 (currently only "ocfs2" is valid here)
+
+Options for corosync:
+    -u          Configure corosync to communicate over unicast (UDP),
+                and not multicast. Default is multicast unless an
+                environment where multicast cannot be used is detected.
 
 Options for ocfs2 template:
     -p <dev>    Partition this shared storage device (only used in
@@ -202,7 +208,92 @@ init_csync2_remote()
 	fi
 }
 
-init_corosync()
+init_corosync_unicast()
+{
+	if $YES_TO_ALL; then
+		status 'Configuring corosync (unicast)'
+	else
+		status "
+Configure Corosync (unicast):
+  This will configure the cluster messaging layer.  You will need
+  to specify a network address over which to communicate (default
+  is ${NET_IF}'s network, but you can use the network address of any
+  active interface).
+"
+	fi
+
+	if [ -f "$COROSYNC_CONF" ]; then
+		confirm \
+			"$COROSYNC_CONF already exists - overwrite?" || return
+	fi
+
+	local bindnetaddr=$(prompt_for_string \
+		'Network address to bind to (e.g.: 192.168.1.0)' \
+		'([0-9]+\.){3}[0-9]+' "$IP_NETWORK")
+	[ -z "$bindnetaddr" ] && error 'No value for bindnetaddr'
+
+	local mcastport=$(prompt_for_string \
+		'Port' \
+		'[0-9]+' 5405);
+	[ -z "$mcastport" ] && error 'No value for mcastport'
+
+	local tmp_conf=${COROSYNC_CONF}.$$
+	cat > $tmp_conf <<END
+# Please read the corosync.conf.5 manual page
+
+totem {
+	version:	2
+
+	crypto_cipher:	none
+	crypto_hash:	none
+
+	secauth:	off
+	cluster_name:	hacluster
+	clear_node_high_bit: yes
+
+	interface {
+		ringnumber:	0
+		bindnetaddr:	$bindnetaddr
+		mcastport:	$mcastport
+		ttl:		1
+	}
+
+	transport: udpu
+}
+logging {
+	fileline:	off
+	to_stderr:	no
+	to_logfile:	no
+	logfile:	/var/log/cluster/corosync.log
+	to_syslog:	yes
+	debug:		off
+	timestamp:	on
+	logger_subsys {
+		subsys:	QUORUM
+		debug:	off
+	}
+}
+nodelist {
+	node {
+		ring0_addr: $(hostname)
+		nodeid: 1
+	}
+}
+quorum {
+	# Enable and configure quorum subsystem (default: off)
+	# see also corosync.conf.5 and votequorum.5
+	provider: corosync_votequorum
+	expected_votes: 1
+	two_node: 0
+}
+END
+	install_tmp $tmp_conf $COROSYNC_CONF
+	invoke csync2 -m $COROSYNC_CONF
+	invoke csync2 -f $COROSYNC_CONF
+	invoke csync2 -xv $COROSYNC_CONF
+}
+
+init_corosync_multicast()
 {
 	if $YES_TO_ALL; then
 		status 'Configuring corosync'
@@ -238,19 +329,7 @@ Configure Corosync:
 	[ -z "$mcastport" ] && error 'No value for mcastport'
 
 	local tmp_conf=${COROSYNC_CONF}.$$
-# for now, use our inline corosync.conf to force quorum expected_votes...
-#	if grep -q -s '^[[:space:]]*name:[[:space:]]*pacemaker' ${COROSYNC_CONF}.example; then
-#		# "name: pacemaker" in corosync example conf is our assumption
-#		# that the example is sane, so use it:
-#		sed \
-#			-e 's/^\([[:space:]]*bindnetaddr:[[:space:]]*\).*/\1'$bindnetaddr'/' \
-#			-e 's/^\([[:space:]]*mcastaddr:[[:space:]]*\).*/\1'$mcastaddr'/' \
-#			-e 's/^\([[:space:]]*mcastport:[[:space:]]*\).*/\1'$mcastport'/' \
-#			/etc/corosync/corosync.conf.example > $tmp_conf
-#	else
-#		# Fallback to known sane config (defaults from SLE HA 11 SP1
-#		# corosync.conf.example.patch)
-		cat > $tmp_conf <<END
+	cat > $tmp_conf <<END
 # Please read the corosync.conf.5 manual page
 
 totem {
@@ -300,11 +379,21 @@ quorum {
 	two_node: 0
 }
 END
-#	fi
 	install_tmp $tmp_conf $COROSYNC_CONF
 	invoke csync2 -m $COROSYNC_CONF
 	invoke csync2 -f $COROSYNC_CONF
 	invoke csync2 -xv $COROSYNC_CONF
+}
+
+init_corosync()
+{
+	if dmidecode -s system-version | grep '\<.*\.amazon\>'; then
+		init_corosync_unicast
+	elif $COROSYNC_UNICAST; then
+		init_corosync_unicast
+	else
+		init_corosync_multicast
+	fi
 }
 
 # Non-generic, i.e. not for use with every type of cluster you can imagine:
@@ -642,7 +731,7 @@ END
 # for --help option
 [ "$1" == "--help" ] && usage
 
-while getopts 'hi:o:p:qs:t:A:y' o; do
+while getopts 'hi:o:p:qs:t:A:yu' o; do
 	case $o in
 	h) usage;;
 	i) NET_IF=$OPTARG;;
@@ -653,6 +742,7 @@ while getopts 'hi:o:p:qs:t:A:y' o; do
 	t) TEMPLATE=$OPTARG;;
 	A) ADMIN_IP=$OPTARG;;
 	y) YES_TO_ALL=true;;
+	u) COROSYNC_UNICAST=true;;
 	esac
 done
 

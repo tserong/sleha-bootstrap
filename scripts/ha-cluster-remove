@@ -173,6 +173,11 @@ remove_cluster()
 	# for the host that's now gone.
 	invoke csync2 -R && invoke csync2 -m $CSYNC2_CFG && invoke csync2 -f $CSYNC2_CFG && invoke csync2 -xv >/dev/null 2>&1 || error "Propagate the file $CYNC2_CFG failed"
 
+	# remove node if unicast
+	if grep nodelist < "$COROSYNC_CONF" >/dev/null 2>&1; then
+		crm corosync del-node "$(hostname)"
+	fi
+
 	# Decrement expected_votes in corosync.conf
 	# TODO(must): this is rather fragile (see related code in ha-cluster-join)
 	local tmp_conf=${COROSYNC_CONF}.$$

@@ -203,6 +203,11 @@ join_cluster()
 	# If COROSYNC_CONF doesn't exist or is empty, we will fail here. (bsc#943227)
 	[ ! -s $COROSYNC_CONF ] && error "$COROSYNC_CONF is not readable. Please ensure that hostnames are resolvable."
 
+	# if unicast, we need to add our node to $COROSYNC_CONF
+	if grep nodelist < "$COROSYNC_CONF" >/dev/null 2>&1; then
+		crm corosync add-node "$(hostname)"
+	fi
+
 	local tmp_conf=${COROSYNC_CONF}.$$
 	local new_quorum=$(awk -F[^0-9] '/^[[:space:]]*expected_votes/ { print $NF + 1 };' $COROSYNC_CONF)
 	local two_node=0
