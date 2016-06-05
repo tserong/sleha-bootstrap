@@ -168,7 +168,7 @@ init_firewall()
 		if ! grep -q '^FW_CONFIGURATIONS_EXT=.*cluster' $SYSCONFIG_FW ; then
 			tmp_conf=${SYSCONFIG_FW}.$$
 			sed \
-				-e 's/^\(FW_CONFIGURATIONS_EXT="\)\(.*\)/\1cluster \2/' \
+				-e 's/^\(FW_CONFIGURATIONS_EXT=\"\)\(.*\)/\1cluster \2/' \
 				$SYSCONFIG_FW > $tmp_conf
 			install_tmp $tmp_conf $SYSCONFIG_FW
 		fi
