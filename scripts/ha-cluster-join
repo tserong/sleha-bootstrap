@@ -231,6 +231,12 @@ join_cluster()
 	if crm configure show | grep -q 'no-quorum-policy=.*ignore' ; then
 		invoke crm_attribute --attr-name no-quorum-policy --delete-attr
 	fi
+
+	# if unicast, we need to reload the corosync configuration
+	# on the other nodes
+	if grep nodelist < "$COROSYNC_CONF" >/dev/null 2>&1; then
+		crm cluster run 'crm corosync reload'
+	fi
 }
 
 #------------------------------------------------------------------------------
