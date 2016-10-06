@@ -29,6 +29,7 @@ declare -r INVOCATION=$(printf '%q ' "$0" "$@")
 declare -r LOG_FILE=/var/log/ha-cluster-bootstrap.log
 declare -r CSYNC2_KEY=/etc/csync2/key_hagroup
 declare -r CSYNC2_CFG=/etc/csync2/csync2.cfg
+declare -r COROSYNC_AUTH=/etc/corosync/authkey
 declare -r COROSYNC_CONF=/etc/corosync/corosync.conf
 declare -r SYSCONFIG_SBD=/etc/sysconfig/sbd
 declare -r SYSCONFIG_FW=/etc/sysconfig/SuSEfirewall2
