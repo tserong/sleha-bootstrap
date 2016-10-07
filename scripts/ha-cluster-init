@@ -134,7 +134,7 @@ init_csync2()
 	invoke rm -f $CSYNC2_KEY
 	status_long "Generating csync2 shared key (this may take a while)"
 	# On a quiet VM, "a while" can be "way too long" (not enough entropy)
-	invoke csync2 -k $CSYNC2_KEY || error "Can't create csync2 key $keyfile"
+	invoke csync2 -k $CSYNC2_KEY || error "Can't create csync2 key $CSYNC2_KEY"
 	status_done
 
 	local tmp_conf=${CSYNC2_CFG}.$$
