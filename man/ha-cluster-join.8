@@ -47,6 +47,9 @@ Default to IP address on
 .I interface
 instead of eth0.
 .TP
+.BI "-w " watchdog
+Use the given watchdog device.
+.TP
 .I stage
 Invoke only one stage of the cluster join.  The stage can be
 any one of
@@ -85,9 +88,11 @@ SBD fencing configuration.
 A complete log of all actions is written to
 .I /var/log/ha-cluster-bootstrap.log
 .SH "SEE ALSO"
+.BR crm (8),
 .BR csync2 (1),
 .BR corosync (8),
 .BR ha-cluster-init (8),
 .BR ha-cluster-remove (8)
 .SH AUTHOR
 Tim Serong <tserong@suse.com>
+Kristoffer Gronlund <kgronlund@suse.com>

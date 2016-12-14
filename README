@@ -1,6 +1,10 @@
 HA Cluster Bootstrap
 ====================
 
+NOTE: The actual implementation of these tools has moved to crmsh:
+
+    https://github.com/ClusterLabs/crmsh
+
 Tools to bootstrap a Pacemaker High Availability cluster in a hurry.
 
 * ha-cluster-init
@@ -11,6 +15,15 @@ Tools to bootstrap a Pacemaker High Availability cluster in a hurry.
 
 * ha-cluster-remove
   Removes a node from the cluster.
+
+* ha-cluster-geo-init
+  Configure cluster as the initial cluster in a geo configuration.
+
+* ha-cluster-geo-join
+  Add cluster to a geo configuration.
+
+* ha-cluster-geo-init-arbitrator
+  Configure node as geo arbitrator.
 
 NOTE: This tool is most likely to work best on a SUSE-based 
 distribution (SLE or openSUSE). Patches to make it cross-

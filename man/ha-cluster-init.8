@@ -1,6 +1,6 @@
 .TH HA-CLUSTER-INIT 8 "2011-05-24"
 .SH NAME
-ha-cluster-init \- Initialize the first node in a new HA cluster.
+ha-cluster-init \- Initialize a new HA cluster.
 .SH SYNOPSIS
 .B ha-cluster-init
 [\fB-hqy\fR]
@@ -12,9 +12,9 @@ ha-cluster-init \- Initialize the first node in a new HA cluster.
 [\fIstage\fR]
 .SH DESCRIPTION
 .B ha-cluster-init
-automates initial configuration of the first node in a SUSE
-Linux Enterprise High Availability cluster.  If invoked
-with no arguments, it will:
+Automates initial configuration of a SUSE Linux Enterprise
+High Availability cluster.
+If invoked with no arguments, it will:
 .IP 1.
 Generate SSH keys for passwordless SSH between cluster nodes.
 .IP 2.
@@ -53,6 +53,27 @@ destructive).
 Default to IP address on
 .I interface
 instead of eth0 when configuring Corosync.
+.TP
+.BI "-n " name
+Set the name of the configured cluster. Defaults to
+.I hacluster
+.
+.TP
+.BI "-N " nodes
+Space-separated list of nodes to add to the created
+cluster. May include the local host, which will
+always be configured as the initial cluster node.
+.TP
+.BI "-w " watchdog
+Use the given watchdog device.
+.TP
+.B -u
+Configure corosync to communicate over unicast (UDP),
+and not multicast. Default is multicast unless an
+environment where multicast cannot be used is detected.
+.TP
+.BI "-A " IP
+Configure a virtual IP address as a cluster resource.
 .TP
 .BI "-s " device
 Use
@@ -129,9 +150,11 @@ SBD fencing configuration.
 A complete log of all actions is written to
 .I /var/log/ha-cluster-bootstrap.log
 .SH "SEE ALSO"
+.BR crm (8),
 .BR csync2 (1),
 .BR corosync (8),
 .BR ha-cluster-join (8),
 .BR ha-cluster-remove (8)
 .SH AUTHOR
 Tim Serong <tserong@suse.com>
+Kristoffer Gronlund <kgronlund@suse.com>

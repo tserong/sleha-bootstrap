@@ -1,7 +1,8 @@
+#!/bin/sh
 #
-# Copyright (c) 2010-2013 SUSE LLC, All Rights Reserved.
+# Copyright (c) 2016 SUSE LLC, All Rights Reserved.
 #
-# Author: Tim Serong <tserong@suse.com>
+# Author: Kristoffer Gronlund <kgronlund@suse.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of version 2 of the GNU General Public License as
@@ -22,21 +23,5 @@
 # along with this program; if not, write the Free Software Foundation,
 # Inc., 59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
 #
-
-dummy:
-	@echo 'Not much here yet - try `make archive` or `make TO=$$some_hostname deploy`'
-
-# Make a tar.bz2 of everything
-archive:
-	rm -f ha-cluster-bootstrap.tar.bz2
-	git archive --prefix=ha-cluster-bootstrap/ HEAD | bzip2 > ha-cluster-bootstrap.tar.bz2
-
-# For testing purposes (helps if you have passwordless ssh...)
-deploy:
-	@if [ -z "$(TO)" ]; then \
-		echo "Run make TO=target-hostname deploy"; \
-	else \
-		scp scripts/ha-cluster-functions $(TO):/usr/lib/; \
-		scp scripts/ha-cluster-{init,join,remove,geo-init,geo-join,geo-init-arbitrator} $(TO):/usr/sbin/; \
-	fi
-
+. /usr/lib/ha-cluster-functions
+crmsh geo-join "$@"
