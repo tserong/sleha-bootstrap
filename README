@@ -1,9 +1,11 @@
 HA Cluster Bootstrap
 ====================
 
-NOTE: The actual implementation of these tools has moved to crmsh:
+NOTE: The actual implementation of these tools has moved to crmsh and
+are included in crmsh from version 3.0.0:
 
     https://github.com/ClusterLabs/crmsh
+    https://crmsh.github.io/
 
 Tools to bootstrap a Pacemaker High Availability cluster in a hurry.
 
