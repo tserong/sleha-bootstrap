@@ -64,6 +64,10 @@ Space-separated list of nodes to add to the created
 cluster. May include the local host, which will
 always be configured as the initial cluster node.
 .TP
+.B -S
+Enable SBD even if no SBD device is configured
+(diskless mode).
+.TP
 .BI "-w " watchdog
 Use the given watchdog device.
 .TP
@@ -81,7 +85,15 @@ Use
 for SBD fencing.  The device path must be persistent and
 consistent across all nodes in the cluster, so
 .I /dev/disk/by-id/*
-devices are a good choice.
+devices are a good choice. Using
+.B -s
+.I device
+and
+.B -S
+together will equal to use
+.B -s
+.I device
+only.
 .TP
 .BI "-t " name
 Perform additional cluster configuration based on the
